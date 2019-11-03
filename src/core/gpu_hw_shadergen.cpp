@@ -603,7 +603,7 @@ std::string GPU_HW_ShaderGen::GenerateVRAMWriteFragmentShader()
   std::stringstream ss;
   WriteHeader(ss);
   WriteCommonFunctions(ss);
-  DeclareUniformBuffer(ss, {"int2 u_base_coords", "int2 u_size"});
+  DeclareUniformBuffer(ss, {"int2 u_base_coords", "int2 u_size", "int u_buffer_base_offset"});
 
   DeclareTextureBuffer(ss, "samp0", 0, true, true);
   DeclareFragmentEntryPoint(ss, 0, 1, {}, true, false);
@@ -613,7 +613,7 @@ std::string GPU_HW_ShaderGen::GenerateVRAMWriteFragmentShader()
   int2 offset = coords - u_base_coords;
   offset.y = u_size.y - offset.y - 1;
 
-  int buffer_offset = offset.y * u_size.x + offset.x;
+  int buffer_offset = u_buffer_base_offset + (offset.y * u_size.x) + offset.x;
   uint value = LOAD_TEXTURE_BUFFER(samp0, buffer_offset).r;
   
   o_col0 = RGBA5551ToRGBA8(value);
