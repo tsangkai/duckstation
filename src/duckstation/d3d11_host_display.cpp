@@ -175,7 +175,7 @@ void D3D11HostDisplay::WindowResized()
 
 bool D3D11HostDisplay::CreateD3DDevice()
 {
-  const bool debug = true;
+  const bool debug = false;
 
   SDL_SysWMinfo syswm = {};
   if (!SDL_GetWindowWMInfo(m_window, &syswm))
@@ -207,6 +207,16 @@ bool D3D11HostDisplay::CreateD3DDevice()
     Log_ErrorPrintf("D3D11CreateDeviceAndSwapChain failed: 0x%08X", hr);
     return false;
   }
+
+#if 0
+  ComPtr<ID3D11InfoQueue> info;
+  hr = m_device.As(&info);
+  if (SUCCEEDED(hr))
+  {
+    info->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, TRUE);
+    info->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, TRUE);
+  }
+#endif
 
   return true;
 }

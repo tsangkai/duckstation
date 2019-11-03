@@ -25,7 +25,7 @@ struct Settings
   {
     bool show_gpu_state = false;
     bool show_gpu_renderer_stats = false;
-    bool show_vram = true;
+    bool show_vram = false;
     bool dump_cpu_to_vram_copies = false;
     bool dump_vram_to_cpu_copies = false;
 

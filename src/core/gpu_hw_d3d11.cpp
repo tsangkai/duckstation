@@ -96,12 +96,17 @@ void GPU_HW_D3D11::ResetGraphicsAPIState()
 
 void GPU_HW_D3D11::RestoreGraphicsAPIState()
 {
+  const UINT stride = sizeof(BatchVertex);
+  const UINT offset = 0;
+  m_context->IASetVertexBuffers(0, 1, m_vertex_stream_buffer.GetD3DBufferArray(), &stride, &offset);
   m_context->IASetInputLayout(m_batch_input_layout.Get());
+  m_context->PSSetShaderResources(0, 1, m_vram_read_texture.GetD3DSRVArray());
   m_context->OMSetDepthStencilState(m_depth_disabled_state.Get(), 0);
   m_context->OMSetRenderTargets(1, m_vram_texture.GetD3DRTVArray(), nullptr);
   m_context->RSSetState(m_cull_none_rasterizer_state.Get());
   SetViewport(0, 0, m_vram_texture.GetWidth(), m_vram_texture.GetHeight());
   m_drawing_area_changed = true;
+  m_batch_ubo_dirty = true;
 }
 
 void GPU_HW_D3D11::UpdateSettings()
@@ -487,7 +492,7 @@ void GPU_HW_D3D11::DrawUtilityShader(ID3D11PixelShader* shader, const void* unif
 
   m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_context->VSSetShader(m_screen_quad_vertex_shader.Get(), nullptr, 0);
-  m_context->PSSetShader(m_vram_write_pixel_shader.Get(), nullptr, 0);
+  m_context->PSSetShader(shader, nullptr, 0);
   m_context->OMSetBlendState(m_blend_disabled_state.Get(), nullptr, 0xFFFFFFFFu);
 
   m_context->Draw(3, 0);
@@ -500,11 +505,7 @@ void GPU_HW_D3D11::SetDrawState(BatchRenderMode render_mode)
   static constexpr std::array<D3D11_PRIMITIVE_TOPOLOGY, 4> d3d_primitives = {
     {D3D11_PRIMITIVE_TOPOLOGY_LINELIST, D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
      D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP}};
-  const UINT stride = sizeof(BatchVertex);
-  const UINT offset = 0;
   m_context->IASetPrimitiveTopology(d3d_primitives[static_cast<u8>(m_batch.primitive)]);
-  m_context->IASetInputLayout(m_batch_input_layout.Get());
-  m_context->IASetVertexBuffers(0, 1, m_vertex_stream_buffer.GetD3DBufferArray(), &stride, &offset);
 
   m_context->VSSetShader(m_batch_vertex_shaders[BoolToUInt8(textured)].Get(), nullptr, 0);
 
@@ -512,7 +513,6 @@ void GPU_HW_D3D11::SetDrawState(BatchRenderMode render_mode)
                                               [BoolToUInt8(m_batch.dithering)]
                                                 .Get(),
                          nullptr, 0);
-  m_context->PSSetShaderResources(0, 1, m_vram_read_texture.GetD3DSRVArray());
 
   const TransparencyMode transparency_mode =
     (render_mode == BatchRenderMode::OnlyOpaque) ? TransparencyMode::Disabled : m_batch.transparency_mode;
