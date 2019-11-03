@@ -190,7 +190,11 @@ void GPU_HW_D3D11::MapBatchVertexPointer(u32 required_vertices)
 
 void GPU_HW_D3D11::SetCapabilities()
 {
-  m_max_resolution_scale = 1;
+  const u32 max_texture_size = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+  Log_InfoPrintf("Max texture size: %dx%d", max_texture_size, max_texture_size);
+  const u32 max_texture_scale = max_texture_size / VRAM_WIDTH;
+
+  m_max_resolution_scale = max_texture_scale;
   Log_InfoPrintf("Maximum resolution scale is %u", m_max_resolution_scale);
 }
 
@@ -220,15 +224,9 @@ bool GPU_HW_D3D11::CreateFramebuffer()
                   old_vram_texture.GetHeight(), m_vram_texture.GetWidth(), m_vram_texture.GetHeight(),
                   linear_filter ? "linear" : "nearest");
 
-#if 0
-    glDisable(GL_SCISSOR_TEST);
-    old_vram_texture->BindFramebuffer(GL_READ_FRAMEBUFFER);
-    glBlitFramebuffer(0, 0, old_vram_texture->GetWidth(), old_vram_texture->GetHeight(), 0, 0,
-                      m_vram_texture->GetWidth(), m_vram_texture->GetHeight(), GL_COLOR_BUFFER_BIT,
-                      linear_filter ? GL_LINEAR : GL_NEAREST);
-
-    glEnable(GL_SCISSOR_TEST);
-#endif
+    BlitTexture(m_vram_texture.GetD3DRTV(), 0, 0, m_vram_texture.GetWidth(), m_vram_texture.GetHeight(),
+                old_vram_texture.GetD3DSRV(), 0, 0, old_vram_texture.GetWidth(), old_vram_texture.GetHeight(),
+                old_vram_texture.GetWidth(), old_vram_texture.GetHeight(), linear_filter);
   }
 
   if (m_resolution_scale > 1 &&
@@ -371,8 +369,8 @@ bool GPU_HW_D3D11::CreateStateObjects()
 
 bool GPU_HW_D3D11::CompileShaders()
 {
+  const bool debug = false;
   GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
-  const bool debug = true;
 
   m_screen_quad_vertex_shader = D3D11::ShaderCompiler::CompileAndCreateVertexShader(
     m_device.Get(), shadergen.GenerateScreenQuadVertexShader(), debug);
@@ -621,8 +619,8 @@ void GPU_HW_D3D11::UpdateDisplay()
         UploadUniformBlock(uniforms, sizeof(uniforms));
 
         m_host_display->SetDisplayTexture(m_display_texture.GetD3DSRV(), 0, 0, scaled_display_width,
-                                          m_display_texture.GetWidth(), m_display_texture.GetHeight(),
-                                          scaled_display_height, m_crtc_state.display_aspect_ratio);
+                                          scaled_display_height, m_display_texture.GetWidth(),
+                                          m_display_texture.GetHeight(), m_crtc_state.display_aspect_ratio);
       }
 
       RestoreGraphicsAPIState();
@@ -632,63 +630,7 @@ void GPU_HW_D3D11::UpdateDisplay()
 
 void GPU_HW_D3D11::ReadVRAM(u32 x, u32 y, u32 width, u32 height, void* buffer)
 {
-#if 0
-  // we need to convert RGBA8 -> RGBA5551
-  std::vector<u32> temp_buffer(width * height);
-  const u32 flipped_y = VRAM_HEIGHT - y - height;
-
-  // downscaling to 1xIR.
-  if (m_resolution_scale > 1)
-  {
-    const u32 texture_height = m_vram_texture->GetHeight();
-    const u32 scaled_x = x * m_resolution_scale;
-    const u32 scaled_y = y * m_resolution_scale;
-    const u32 scaled_width = width * m_resolution_scale;
-    const u32 scaled_height = height * m_resolution_scale;
-    const u32 scaled_flipped_y = texture_height - scaled_y - scaled_height;
-
-    m_vram_texture->BindFramebuffer(GL_READ_FRAMEBUFFER);
-    m_vram_downsample_texture->BindFramebuffer(GL_DRAW_FRAMEBUFFER);
-    glDisable(GL_SCISSOR_TEST);
-    glBlitFramebuffer(scaled_x, scaled_flipped_y, scaled_x + scaled_width, scaled_flipped_y + scaled_height, 0, 0,
-                      width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-    glEnable(GL_SCISSOR_TEST);
-    m_vram_texture->BindFramebuffer(GL_DRAW_FRAMEBUFFER);
-    m_vram_downsample_texture->BindFramebuffer(GL_READ_FRAMEBUFFER);
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, temp_buffer.data());
-  }
-  else
-  {
-    m_vram_texture->BindFramebuffer(GL_READ_FRAMEBUFFER);
-    glReadPixels(x, flipped_y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, temp_buffer.data());
-  }
-
-  // reverse copy because of lower-left origin
-  const u32 source_stride = width * sizeof(u32);
-  const u8* source_ptr = reinterpret_cast<const u8*>(temp_buffer.data()) + (source_stride * (height - 1));
-  const u32 dst_stride = width * sizeof(u16);
-  u8* dst_ptr = static_cast<u8*>(buffer);
-  for (u32 row = 0; row < height; row++)
-  {
-    const u8* source_row_ptr = source_ptr;
-    u8* dst_row_ptr = dst_ptr;
-
-    for (u32 col = 0; col < width; col++)
-    {
-      u32 src_col;
-      std::memcpy(&src_col, source_row_ptr, sizeof(src_col));
-      source_row_ptr += sizeof(src_col);
-
-      const u16 dst_col = RGBA8888ToRGBA5551(src_col);
-      std::memcpy(dst_row_ptr, &dst_col, sizeof(dst_col));
-      dst_row_ptr += sizeof(dst_col);
-    }
-
-    source_ptr -= source_stride;
-    dst_ptr += dst_stride;
-  }
-
-#endif
+  Log_WarningPrintf("VRAM readback not implemented");
   m_stats.num_vram_reads++;
 }
 
