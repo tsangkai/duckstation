@@ -9,7 +9,7 @@ public:
   enum class API
   {
     OpenGL,
-    Direct3D
+    D3D11
   };
 
 public:

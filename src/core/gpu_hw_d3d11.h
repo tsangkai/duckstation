@@ -15,7 +15,7 @@ public:
   template<typename T>
   using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-  GPU_HW_D3D11();
+  GPU_HW_D3D11(ID3D11Device* device, ID3D11DeviceContext* context);
   ~GPU_HW_D3D11() override;
 
   bool Initialize(System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers) override;
@@ -59,7 +59,8 @@ private:
   bool CreateUniformBuffer();
   bool CreateTextureBuffer();
 
-  bool CompilePrograms();
+  bool CompileShaders();
+  bool CreateInputLayout();
   void SetDrawState(BatchRenderMode render_mode);
   void UploadUniformBlock(const void* data, u32 data_size);
 
@@ -93,8 +94,10 @@ private:
   std::array<std::array<std::array<ComPtr<ID3D11PixelShader>, 2>, 9>, 4> m_batch_pixel_shaders; // [render_mode][texture_mode][dithering]
 
   ComPtr<ID3D11VertexShader> m_screen_quad_vertex_shader;
-  std::array<std::array<ComPtr<ID3D11PixelShader>, 2>, 2> m_display_pixel_shaders;// [depth_24][interlaced]
+  ComPtr<ID3D11PixelShader> m_copy_pixel_shader;
+  ComPtr<ID3D11PixelShader> m_fill_pixel_shader;
   ComPtr<ID3D11PixelShader> m_vram_write_pixel_shader;
+  std::array<std::array<ComPtr<ID3D11PixelShader>, 2>, 2> m_display_pixel_shaders; // [depth_24][interlaced]
 
   GLStats m_stats = {};
   GLStats m_last_stats = {};

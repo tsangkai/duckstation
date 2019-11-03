@@ -2,15 +2,19 @@
 #include "YBaseLib/Assert.h"
 #include "YBaseLib/Log.h"
 #include "YBaseLib/String.h"
+#include "common/d3d11/shader_compiler.h"
 #include "gpu_hw_shadergen.h"
 #include "host_interface.h"
 #include "imgui.h"
 #include "system.h"
 Log_SetChannel(GPU_HW_D3D11);
 
-GPU_HW_D3D11::GPU_HW_D3D11() : GPU_HW() {}
+GPU_HW_D3D11::GPU_HW_D3D11(ID3D11Device* device, ID3D11DeviceContext* context)
+  : GPU_HW(), m_device(device), m_context(context)
+{
+}
 
-GPU_HW_D3D11::~GPU_HW_D3D11() {}
+GPU_HW_D3D11::~GPU_HW_D3D11() = default;
 
 bool GPU_HW_D3D11::Initialize(System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers)
 {
@@ -23,10 +27,10 @@ bool GPU_HW_D3D11::Initialize(System* system, DMA* dma, InterruptController* int
   CreateVertexBuffer();
   CreateUniformBuffer();
   CreateTextureBuffer();
-  if (!CompilePrograms())
+  if (!CompileShaders() || !CreateInputLayout())
     return false;
 
-  //m_system->GetHostInterface()->SetDisplayTexture(m_display_texture.get(), 0, 0, VRAM_WIDTH, VRAM_HEIGHT, 1.0f);
+  // m_system->GetHostInterface()->SetDisplayTexture(m_display_texture.get(), 0, 0, VRAM_WIDTH, VRAM_HEIGHT, 1.0f);
   RestoreGraphicsAPIState();
   return true;
 }
@@ -74,7 +78,7 @@ void GPU_HW_D3D11::UpdateSettings()
   GPU_HW::UpdateSettings();
 
   CreateFramebuffer();
-  CompilePrograms();
+  CompileShaders();
   UpdateDisplay();
 }
 
@@ -199,6 +203,7 @@ bool GPU_HW_D3D11::CreateFramebuffer()
 
   m_context->OMSetRenderTargets(1, m_vram_texture.GetD3DRTVArray(), nullptr);
   m_vram_read_texture_dirty = true;
+  return true;
 }
 
 void GPU_HW_D3D11::ClearFramebuffer()
@@ -244,106 +249,97 @@ bool GPU_HW_D3D11::CreateTextureBuffer()
   return true;
 }
 
-bool GPU_HW_D3D11::CompilePrograms()
+bool GPU_HW_D3D11::CompileShaders()
 {
-#if 0
-  GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::OpenGL, m_resolution_scale, m_true_color);
+  GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
+  const bool debug = true;
 
-  for (u32 render_mode = 0; render_mode < 4; render_mode++)
+  m_screen_quad_vertex_shader = D3D11::ShaderCompiler::CompileAndCreateVertexShader(
+    m_device.Get(), shadergen.GenerateScreenQuadVertexShader(), debug);
+  if (!m_screen_quad_vertex_shader)
+    return false;
+
+  for (u8 textured = 0; textured < 2; textured++)
   {
-    for (u32 texture_mode = 0; texture_mode < 9; texture_mode++)
+    const std::string vs = shadergen.GenerateBatchVertexShader(ConvertToBoolUnchecked(textured));
+    m_batch_vertex_shaders[textured] = D3D11::ShaderCompiler::CompileAndCreateVertexShader(m_device.Get(), vs, debug);
+    if (!m_batch_vertex_shaders[textured])
+      return false;
+  }
+
+  for (u8 render_mode = 0; render_mode < 4; render_mode++)
+  {
+    for (u8 texture_mode = 0; texture_mode < 9; texture_mode++)
     {
       for (u8 dithering = 0; dithering < 2; dithering++)
       {
-        const bool textured = (static_cast<TextureMode>(texture_mode) != TextureMode::Disabled);
-        const std::string vs = shadergen.GenerateBatchVertexShader(textured);
-        const std::string fs = shadergen.GenerateBatchFragmentShader(static_cast<BatchRenderMode>(render_mode),
+        const std::string ps = shadergen.GenerateBatchFragmentShader(static_cast<BatchRenderMode>(render_mode),
                                                                      static_cast<TextureMode>(texture_mode),
                                                                      ConvertToBoolUnchecked(dithering));
 
-        GL::Program& prog = m_render_programs[render_mode][texture_mode][dithering];
-        if (!prog.Compile(vs, fs))
+        m_batch_pixel_shaders[render_mode][texture_mode][dithering] =
+          D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), ps, debug);
+        if (!m_batch_pixel_shaders[render_mode][texture_mode][dithering])
           return false;
-
-        prog.BindAttribute(0, "a_pos");
-        prog.BindAttribute(1, "a_col0");
-        if (textured)
-        {
-          prog.BindAttribute(2, "a_texcoord");
-          prog.BindAttribute(3, "a_texpage");
-        }
-
-        prog.BindFragData(0, "o_col0");
-
-        if (!prog.Link())
-          return false;
-
-        prog.BindUniformBlock("UBOBlock", 1);
-        if (textured)
-        {
-          prog.Bind();
-          prog.Uniform1i("samp0", 0);
-        }
       }
     }
   }
 
-  m_vertex_stream_buffer->Bind();
+  m_copy_pixel_shader = D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), "", debug);
+  if (!m_copy_pixel_shader)
+    return false;
 
-  glGenVertexArrays(1, &m_vao_id);
-  glBindVertexArray(m_vao_id);
-  glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
-  glEnableVertexAttribArray(2);
-  glEnableVertexAttribArray(3);
-  glVertexAttribIPointer(0, 2, GL_INT, sizeof(BatchVertex), reinterpret_cast<void*>(offsetof(BatchVertex, x)));
-  glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, true, sizeof(BatchVertex),
-                        reinterpret_cast<void*>(offsetof(BatchVertex, color)));
-  glVertexAttribIPointer(2, 2, GL_INT, sizeof(BatchVertex), reinterpret_cast<void*>(offsetof(BatchVertex, texcoord)));
-  glVertexAttribIPointer(3, 1, GL_INT, sizeof(BatchVertex), reinterpret_cast<void*>(offsetof(BatchVertex, texpage)));
-  glBindVertexArray(0);
+  m_fill_pixel_shader =
+    D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), shadergen.GenerateFillFragmentShader(), debug);
+  if (!m_fill_pixel_shader)
+    return false;
 
-  glGenVertexArrays(1, &m_attributeless_vao_id);
+  m_vram_write_pixel_shader = D3D11::ShaderCompiler::CompileAndCreatePixelShader(
+    m_device.Get(), shadergen.GenerateVRAMWriteFragmentShader(), debug);
+  if (!m_vram_write_pixel_shader)
+    return false;
 
   for (u8 depth_24bit = 0; depth_24bit < 2; depth_24bit++)
   {
     for (u8 interlaced = 0; interlaced < 2; interlaced++)
     {
-      GL::Program& prog = m_display_programs[depth_24bit][interlaced];
-      const std::string vs = shadergen.GenerateScreenQuadVertexShader();
-      const std::string fs = shadergen.GenerateDisplayFragmentShader(ConvertToBoolUnchecked(depth_24bit),
+      const std::string ps = shadergen.GenerateDisplayFragmentShader(ConvertToBoolUnchecked(depth_24bit),
                                                                      ConvertToBoolUnchecked(interlaced));
-      if (!prog.Compile(vs, fs))
+      m_display_pixel_shaders[depth_24bit][interlaced] =
+        D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), ps, debug);
+      if (!m_display_pixel_shaders[depth_24bit][interlaced])
         return false;
-
-      prog.BindFragData(0, "o_col0");
-      if (!prog.Link())
-        return false;
-
-      prog.BindUniformBlock("UBOBlock", 1);
-
-      prog.Bind();
-      prog.Uniform1i("samp0", 0);
     }
   }
 
-  if (!m_vram_write_program.Compile(shadergen.GenerateScreenQuadVertexShader(),
-                                    shadergen.GenerateVRAMWriteFragmentShader()))
+  return true;
+}
+
+bool GPU_HW_D3D11::CreateInputLayout()
+{
+  static constexpr std::array<D3D11_INPUT_ELEMENT_DESC, 4> attributes = {
+    {{"ATTR", 0, DXGI_FORMAT_R32G32_SINT, 0, offsetof(BatchVertex, x), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(BatchVertex, color), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 2, DXGI_FORMAT_R32G32_SINT, 0, offsetof(BatchVertex, texcoord), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 3, DXGI_FORMAT_R32_SINT, 0, offsetof(BatchVertex, texpage), D3D11_INPUT_PER_VERTEX_DATA, 0}}};
+
+  // we need a vertex shader...
+  GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
+  ComPtr<ID3DBlob> vs_bytecode = D3D11::ShaderCompiler::CompileShader(
+    D3D11::ShaderCompiler::Type::Vertex, m_device->GetFeatureLevel(), shadergen.GenerateBatchVertexShader(true), false);
+  if (!vs_bytecode)
+    return false;
+
+  const HRESULT hr = m_device->CreateInputLayout(attributes.data(), static_cast<UINT>(attributes.size()),
+                                                 vs_bytecode->GetBufferPointer(), vs_bytecode->GetBufferSize(),
+                                                 m_batch_input_layout.GetAddressOf());
+  if (FAILED(hr))
   {
+    Log_ErrorPrintf("CreateInputLayout failed: 0x%08X", hr);
     return false;
   }
 
-  m_vram_write_program.BindFragData(0, "o_col0");
-  if (!m_vram_write_program.Link())
-    return false;
-
-  m_vram_write_program.BindUniformBlock("UBOBlock", 1);
-
-  m_vram_write_program.Bind();
-  m_vram_write_program.Uniform1i("samp0", 0);
-
   return true;
-#endif
 }
 
 void GPU_HW_D3D11::SetDrawState(BatchRenderMode render_mode)
@@ -578,20 +574,27 @@ void GPU_HW_D3D11::FillVRAM(u32 x, u32 y, u32 width, u32 height, u32 color)
   width *= m_resolution_scale;
   height *= m_resolution_scale;
 
-#if 0
-  glScissor(x, m_vram_texture->GetHeight() - y - height, width, height);
-
   // drop precision unless true colour is enabled
   if (!m_true_color)
     color = RGBA5551ToRGBA8888(RGBA8888ToRGBA5551(color));
 
-  const auto [r, g, b, a] = RGBA8ToFloat(color);
-  glClearColor(r, g, b, a);
-  glClear(GL_COLOR_BUFFER_BIT);
+  m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  m_context->VSSetShader(m_screen_quad_vertex_shader.Get(), nullptr, 0);
+  m_context->PSSetShader(m_fill_pixel_shader.Get(), nullptr, 0);
+
+  float uniform[4];
+  std::tie(uniform[0], uniform[1], uniform[2], uniform[3]) = RGBA8ToFloat(color);
+  UploadUniformBlock(uniform, sizeof(uniform));
+  m_batch_ubo_dirty = true;
+
+  CD3D11_RECT scissor_rc(x, y, x + width, y + height);
+  m_context->RSSetScissorRects(1, &scissor_rc);
+  m_context->OMSetBlendState(m_blend_disabled_state.Get(), nullptr, 0xFFFFFFFFu);
+
+  m_context->Draw(3, 0);
 
   UpdateDrawingArea();
   InvalidateVRAMReadCache();
-#endif
 }
 
 void GPU_HW_D3D11::UpdateVRAM(u32 x, u32 y, u32 width, u32 height, const void* data)
@@ -601,19 +604,20 @@ void GPU_HW_D3D11::UpdateVRAM(u32 x, u32 y, u32 width, u32 height, const void* d
   std::memcpy(map_result.pointer, data, num_pixels * sizeof(u16));
   m_texture_stream_buffer.Unmap(m_context.Get(), num_pixels * sizeof(u16));
 
+  m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_context->VSSetShader(m_screen_quad_vertex_shader.Get(), nullptr, 0);
   m_context->PSSetShader(m_vram_write_pixel_shader.Get(), nullptr, 0);
   m_context->PSSetShaderResources(0, 1, m_texture_stream_buffer_srv_r16ui.GetAddressOf());
+
+  const u32 uniforms[5] = {x, y, width, height, map_result.index_aligned};
+  UploadUniformBlock(uniforms, sizeof(uniforms));
+  m_batch_ubo_dirty = true;
 
   // viewport should be set to the whole VRAM size, so we can just set the scissor
   const CD3D11_RECT scissor_rc(x * m_resolution_scale, y * m_resolution_scale, x * m_resolution_scale + width,
                                y * m_resolution_scale + height);
   m_context->RSSetScissorRects(1, &scissor_rc);
   m_context->OMSetBlendState(m_blend_disabled_state.Get(), nullptr, 0xFFFFFFFFu);
-
-  const u32 uniforms[5] = {x, y, width, height, map_result.index_aligned};
-  UploadUniformBlock(uniforms, sizeof(uniforms));
-  m_batch_ubo_dirty = true;
 
   m_context->Draw(3, 0);
 
@@ -676,7 +680,7 @@ void GPU_HW_D3D11::FlushRender()
   }
 }
 
-std::unique_ptr<GPU> GPU::CreateHardwareOpenGLRenderer()
+std::unique_ptr<GPU> GPU::CreateHardwareD3D11Renderer(void* device, void* context)
 {
-  return std::make_unique<GPU_HW_D3D11>();
+  return std::make_unique<GPU_HW_D3D11>(static_cast<ID3D11Device*>(device), static_cast<ID3D11DeviceContext*>(context));
 }

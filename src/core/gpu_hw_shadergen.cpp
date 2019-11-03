@@ -1,7 +1,7 @@
 #include "gpu_hw_shadergen.h"
 
 GPU_HW_ShaderGen::GPU_HW_ShaderGen(API backend, u32 resolution_scale, bool true_color)
-  : m_backend(backend), m_resolution_scale(resolution_scale), m_true_color(true_color), m_glsl(backend != API::Direct3D)
+  : m_backend(backend), m_resolution_scale(resolution_scale), m_true_color(true_color), m_glsl(backend != API::D3D11)
 {
 }
 
@@ -22,9 +22,9 @@ void GPU_HW_ShaderGen::WriteHeader(std::stringstream& ss)
     ss << "#version 330 core\n\n";
     ss << "#define API_OPENGL 1\n";
   }
-  else if (m_backend == API::Direct3D)
+  else if (m_backend == API::D3D11)
   {
-    ss << "#define API_DIRECT3D 1\n";
+    ss << "#define API_D3D11 1\n";
   }
 
   if (m_glsl)

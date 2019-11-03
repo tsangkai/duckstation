@@ -116,6 +116,9 @@ public:
   // Ticks for hblank/vblank.
   void Execute(TickCount ticks);
 
+  // gpu_hw_d3d11.cpp
+  static std::unique_ptr<GPU> CreateHardwareD3D11Renderer(void* device, void* context);
+
   // gpu_hw_opengl.cpp
   static std::unique_ptr<GPU> CreateHardwareOpenGLRenderer();
 
