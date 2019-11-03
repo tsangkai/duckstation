@@ -15,10 +15,10 @@ public:
   template<typename T>
   using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-  GPU_HW_D3D11(ID3D11Device* device, ID3D11DeviceContext* context);
+  GPU_HW_D3D11();
   ~GPU_HW_D3D11() override;
 
-  bool Initialize(System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers) override;
+  bool Initialize(HostDisplay* host_display, System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers) override;
   void Reset() override;
 
   void ResetGraphicsAPIState() override;
@@ -58,9 +58,10 @@ private:
   bool CreateVertexBuffer();
   bool CreateUniformBuffer();
   bool CreateTextureBuffer();
+  bool CreateBatchInputLayout();
+  bool CreateStateObjects();
 
   bool CompileShaders();
-  bool CreateInputLayout();
   void SetDrawState(BatchRenderMode render_mode);
   void UploadUniformBlock(const void* data, u32 data_size);
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "../types.h"
+#include "YBaseLib/Windows/WindowsHeaders.h"
 #include <cstring>
 #include <d3d11.h>
 #include <wrl/client.h>
@@ -96,4 +97,4 @@ private:
 
   D3D11_MAPPED_SUBRESOURCE m_map = {};
 };
-} // namespace D3D
+} // namespace D3D11

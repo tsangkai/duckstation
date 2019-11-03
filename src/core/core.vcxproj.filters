@@ -54,6 +54,7 @@
     <ClInclude Include="gpu_sw.h" />
     <ClInclude Include="gpu_hw_shadergen.h" />
     <ClInclude Include="gpu_hw_d3d11.h" />
+    <ClInclude Include="host_display.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpu_core.inl" />

@@ -19,9 +19,10 @@ void GPU_HW::Reset()
   m_batch_ubo_dirty = true;
 }
 
-bool GPU_HW::Initialize(System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers)
+bool GPU_HW::Initialize(HostDisplay* host_display, System* system, DMA* dma, InterruptController* interrupt_controller,
+                        Timers* timers)
 {
-  if (!GPU::Initialize(system, dma, interrupt_controller, timers))
+  if (!GPU::Initialize(host_display, system, dma, interrupt_controller, timers))
     return false;
 
   m_resolution_scale = std::clamp<u32>(m_system->GetSettings().gpu_resolution_scale, 1, m_max_resolution_scale);

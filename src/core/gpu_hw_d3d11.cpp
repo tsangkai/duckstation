@@ -4,33 +4,45 @@
 #include "YBaseLib/String.h"
 #include "common/d3d11/shader_compiler.h"
 #include "gpu_hw_shadergen.h"
+#include "host_display.h"
 #include "host_interface.h"
 #include "imgui.h"
 #include "system.h"
 Log_SetChannel(GPU_HW_D3D11);
 
-GPU_HW_D3D11::GPU_HW_D3D11(ID3D11Device* device, ID3D11DeviceContext* context)
-  : GPU_HW(), m_device(device), m_context(context)
+GPU_HW_D3D11::GPU_HW_D3D11() = default;
+
+GPU_HW_D3D11::~GPU_HW_D3D11()
 {
+  m_host_display->SetDisplayTexture(nullptr, 0, 0, 0, 0, 0, 0, 1.0f);
 }
 
-GPU_HW_D3D11::~GPU_HW_D3D11() = default;
-
-bool GPU_HW_D3D11::Initialize(System* system, DMA* dma, InterruptController* interrupt_controller, Timers* timers)
+bool GPU_HW_D3D11::Initialize(HostDisplay* host_display, System* system, DMA* dma,
+                              InterruptController* interrupt_controller, Timers* timers)
 {
   SetCapabilities();
 
-  if (!GPU_HW::Initialize(system, dma, interrupt_controller, timers))
+  if (!GPU_HW::Initialize(host_display, system, dma, interrupt_controller, timers))
+    return false;
+
+  if (host_display->GetRenderAPI() != HostDisplay::RenderAPI::D3D11)
+  {
+    Log_ErrorPrintf("Host render API is incompatible");
+    return false;
+  }
+
+  m_device = static_cast<ID3D11Device*>(host_display->GetHostRenderDevice());
+  m_context = static_cast<ID3D11DeviceContext*>(host_display->GetHostRenderContext());
+  if (!m_device || !m_context)
     return false;
 
   CreateFramebuffer();
   CreateVertexBuffer();
   CreateUniformBuffer();
   CreateTextureBuffer();
-  if (!CompileShaders() || !CreateInputLayout())
+  if (!CompileShaders() || !CreateBatchInputLayout())
     return false;
 
-  // m_system->GetHostInterface()->SetDisplayTexture(m_display_texture.get(), 0, 0, VRAM_WIDTH, VRAM_HEIGHT, 1.0f);
   RestoreGraphicsAPIState();
   return true;
 }
@@ -249,6 +261,79 @@ bool GPU_HW_D3D11::CreateTextureBuffer()
   return true;
 }
 
+bool GPU_HW_D3D11::CreateBatchInputLayout()
+{
+  static constexpr std::array<D3D11_INPUT_ELEMENT_DESC, 4> attributes = {
+    {{"ATTR", 0, DXGI_FORMAT_R32G32_SINT, 0, offsetof(BatchVertex, x), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(BatchVertex, color), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 2, DXGI_FORMAT_R32_SINT, 0, offsetof(BatchVertex, texcoord), D3D11_INPUT_PER_VERTEX_DATA, 0},
+     {"ATTR", 3, DXGI_FORMAT_R32_SINT, 0, offsetof(BatchVertex, texpage), D3D11_INPUT_PER_VERTEX_DATA, 0}}};
+
+  // we need a vertex shader...
+  GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
+  ComPtr<ID3DBlob> vs_bytecode = D3D11::ShaderCompiler::CompileShader(
+    D3D11::ShaderCompiler::Type::Vertex, m_device->GetFeatureLevel(), shadergen.GenerateBatchVertexShader(true), false);
+  if (!vs_bytecode)
+    return false;
+
+  const HRESULT hr = m_device->CreateInputLayout(attributes.data(), static_cast<UINT>(attributes.size()),
+                                                 vs_bytecode->GetBufferPointer(), vs_bytecode->GetBufferSize(),
+                                                 m_batch_input_layout.GetAddressOf());
+  if (FAILED(hr))
+  {
+    Log_ErrorPrintf("CreateInputLayout failed: 0x%08X", hr);
+    return false;
+  }
+
+  return true;
+}
+
+bool GPU_HW_D3D11::CreateStateObjects()
+{
+  HRESULT hr;
+
+  CD3D11_RASTERIZER_DESC rs_desc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT());
+  rs_desc.CullMode = D3D11_CULL_NONE;
+  rs_desc.ScissorEnable = TRUE;
+  hr = m_device->CreateRasterizerState(&rs_desc, m_cull_none_rasterizer_state.GetAddressOf());
+  if (FAILED(hr))
+    return false;
+
+  CD3D11_DEPTH_STENCIL_DESC ds_desc = CD3D11_DEPTH_STENCIL_DESC(CD3D11_DEFAULT());
+  ds_desc.DepthEnable = FALSE;
+  ds_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+  hr = m_device->CreateDepthStencilState(&ds_desc, m_depth_disabled_state.GetAddressOf());
+  if (FAILED(hr))
+    return false;
+
+  CD3D11_BLEND_DESC bl_desc = CD3D11_BLEND_DESC(CD3D11_DEFAULT());
+  hr = m_device->CreateBlendState(&bl_desc, m_blend_disabled_state.GetAddressOf());
+  if (FAILED(hr))
+    return false;
+
+  m_batch_blend_states[static_cast<u8>(TransparencyMode::Disabled)] = m_blend_disabled_state;
+
+  for (u8 transparency_mode = 0; transparency_mode < 4; transparency_mode++)
+  {
+    bl_desc.RenderTarget[0].BlendEnable = TRUE;
+    bl_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+    bl_desc.RenderTarget[0].DestBlend = D3D11_BLEND_SRC_ALPHA;
+    bl_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    bl_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    bl_desc.RenderTarget[0].BlendOp =
+      (transparency_mode == static_cast<u8>(TransparencyMode::BackgroundMinusForeground)) ?
+        D3D11_BLEND_OP_REV_SUBTRACT :
+        D3D11_BLEND_OP_ADD;
+    bl_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+    hr = m_device->CreateBlendState(&bl_desc, m_batch_blend_states[transparency_mode].GetAddressOf());
+    if (FAILED(hr))
+      return false;
+  }
+
+  return true;
+}
+
 bool GPU_HW_D3D11::CompileShaders()
 {
   GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
@@ -285,7 +370,8 @@ bool GPU_HW_D3D11::CompileShaders()
     }
   }
 
-  m_copy_pixel_shader = D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), "", debug);
+  m_copy_pixel_shader =
+    D3D11::ShaderCompiler::CompileAndCreatePixelShader(m_device.Get(), shadergen.GenerateCopyFragmentShader(), debug);
   if (!m_copy_pixel_shader)
     return false;
 
@@ -310,33 +396,6 @@ bool GPU_HW_D3D11::CompileShaders()
       if (!m_display_pixel_shaders[depth_24bit][interlaced])
         return false;
     }
-  }
-
-  return true;
-}
-
-bool GPU_HW_D3D11::CreateInputLayout()
-{
-  static constexpr std::array<D3D11_INPUT_ELEMENT_DESC, 4> attributes = {
-    {{"ATTR", 0, DXGI_FORMAT_R32G32_SINT, 0, offsetof(BatchVertex, x), D3D11_INPUT_PER_VERTEX_DATA, 0},
-     {"ATTR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(BatchVertex, color), D3D11_INPUT_PER_VERTEX_DATA, 0},
-     {"ATTR", 2, DXGI_FORMAT_R32G32_SINT, 0, offsetof(BatchVertex, texcoord), D3D11_INPUT_PER_VERTEX_DATA, 0},
-     {"ATTR", 3, DXGI_FORMAT_R32_SINT, 0, offsetof(BatchVertex, texpage), D3D11_INPUT_PER_VERTEX_DATA, 0}}};
-
-  // we need a vertex shader...
-  GPU_HW_ShaderGen shadergen(GPU_HW_ShaderGen::API::D3D11, m_resolution_scale, m_true_color);
-  ComPtr<ID3DBlob> vs_bytecode = D3D11::ShaderCompiler::CompileShader(
-    D3D11::ShaderCompiler::Type::Vertex, m_device->GetFeatureLevel(), shadergen.GenerateBatchVertexShader(true), false);
-  if (!vs_bytecode)
-    return false;
-
-  const HRESULT hr = m_device->CreateInputLayout(attributes.data(), static_cast<UINT>(attributes.size()),
-                                                 vs_bytecode->GetBufferPointer(), vs_bytecode->GetBufferSize(),
-                                                 m_batch_input_layout.GetAddressOf());
-  if (FAILED(hr))
-  {
-    Log_ErrorPrintf("CreateInputLayout failed: 0x%08X", hr);
-    return false;
   }
 
   return true;
@@ -378,6 +437,10 @@ void GPU_HW_D3D11::SetDrawState(BatchRenderMode render_mode)
     m_context->RSSetScissorRects(1, &rc);
   }
 
+  const CD3D11_VIEWPORT vp(0.0f, 0.0f, static_cast<float>(m_vram_texture.GetWidth()),
+                           static_cast<float>(m_vram_texture.GetHeight()));
+  m_context->RSSetViewports(1, &vp);
+
   if (m_batch_ubo_dirty)
   {
     UploadUniformBlock(&m_batch_ubo_data, sizeof(m_batch_ubo_data));
@@ -406,14 +469,15 @@ void GPU_HW_D3D11::UpdateDisplay()
 {
   GPU_HW::UpdateDisplay();
 
-#if 0
   if (m_system->GetSettings().debugging.show_vram)
   {
-    m_system->GetHostInterface()->SetDisplayTexture(m_vram_texture.get(), 0, 0, m_vram_texture->GetWidth(),
-                                                    m_vram_texture->GetHeight(), 1.0f);
+    m_host_display->SetDisplayTexture(m_vram_texture.GetD3DSRV(), 0, 0, m_vram_texture.GetWidth(),
+                                      m_vram_texture.GetHeight(), m_vram_texture.GetWidth(), m_vram_texture.GetHeight(),
+                                      1.0f);
   }
   else
   {
+#if 0
     const u32 vram_offset_x = m_crtc_state.regs.X;
     const u32 vram_offset_y = m_crtc_state.regs.Y;
     const u32 scaled_vram_offset_x = vram_offset_x * m_resolution_scale;
@@ -500,8 +564,8 @@ void GPU_HW_D3D11::UpdateDisplay()
       glViewport(0, 0, m_vram_texture->GetWidth(), m_vram_texture->GetHeight());
       glEnable(GL_SCISSOR_TEST);
     }
-  }
 #endif
+  }
 }
 
 void GPU_HW_D3D11::ReadVRAM(u32 x, u32 y, u32 width, u32 height, void* buffer)
@@ -680,7 +744,7 @@ void GPU_HW_D3D11::FlushRender()
   }
 }
 
-std::unique_ptr<GPU> GPU::CreateHardwareD3D11Renderer(void* device, void* context)
+std::unique_ptr<GPU> GPU::CreateHardwareD3D11Renderer()
 {
-  return std::make_unique<GPU_HW_D3D11>(static_cast<ID3D11Device*>(device), static_cast<ID3D11DeviceContext*>(context));
+  return std::make_unique<GPU_HW_D3D11>();
 }

@@ -72,7 +72,7 @@ ComPtr<ID3DBlob> CompileShader(Type type, D3D_FEATURE_LEVEL feature_level, std::
     {
       ofs << code;
       ofs << "\n\nCompile as " << target << " failed: " << hr << "\n";
-      ofs.write(static_cast<const char*>(error_blob->GetBufferPointer()), error_blob->GetBufferSize());
+      ofs.write(error_string.GetCharArray(), error_string.GetLength());
       ofs.close();
     }
 

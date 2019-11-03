@@ -28,7 +28,7 @@ D3D11_TEXTURE2D_DESC Texture::GetDesc() const
 }
 
 bool Texture::Create(ID3D11Device* device, u32 width, u32 height, DXGI_FORMAT format, bool shader_resource,
-                     bool render_target)
+                     bool render_target, const void* initial_data, u32 initial_data_stride)
 {
   CD3D11_TEXTURE2D_DESC desc(format, width, height, 1, 1, 0, D3D11_USAGE_DEFAULT, 0, 1, 0, 0);
   if (shader_resource)
@@ -36,8 +36,13 @@ bool Texture::Create(ID3D11Device* device, u32 width, u32 height, DXGI_FORMAT fo
   if (render_target)
     desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
+  D3D11_SUBRESOURCE_DATA srd;
+  srd.pSysMem = initial_data;
+  srd.SysMemPitch = initial_data_stride;
+  srd.SysMemSlicePitch = initial_data_stride * height;
+
   ComPtr<ID3D11Texture2D> texture;
-  const HRESULT tex_hr = device->CreateTexture2D(&desc, nullptr, texture.GetAddressOf());
+  const HRESULT tex_hr = device->CreateTexture2D(&desc, initial_data ? &srd : nullptr, texture.GetAddressOf());
   if (FAILED(tex_hr))
   {
     Log_ErrorPrintf("Create texture failed: 0x%08X", tex_hr);
@@ -122,4 +127,4 @@ void Texture::Destroy()
   m_texture.Reset();
 }
 
-} // namespace D3D
+} // namespace D3D11

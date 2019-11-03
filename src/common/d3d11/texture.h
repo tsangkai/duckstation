@@ -1,5 +1,6 @@
 #pragma once
 #include "../types.h"
+#include "YBaseLib/Windows/WindowsHeaders.h"
 #include <d3d11.h>
 #include <wrl/client.h>
 
@@ -30,7 +31,8 @@ public:
   ALWAYS_INLINE operator ID3D11RenderTargetView*() const { return m_rtv.Get(); }
   ALWAYS_INLINE operator bool() const { return static_cast<bool>(m_texture); }
 
-  bool Create(ID3D11Device* device, u32 width, u32 height, DXGI_FORMAT format, bool shader_resource, bool render_target);
+  bool Create(ID3D11Device* device, u32 width, u32 height, DXGI_FORMAT format, bool shader_resource, bool render_target,
+              const void* initial_data = nullptr, u32 initial_data_stride = 0);
   bool Adopt(ID3D11Device* device, ComPtr<ID3D11Texture2D> texture);
 
   void Destroy();
@@ -42,4 +44,4 @@ private:
   u32 m_width;
   u32 m_height;
 };
-} // namespace D3D
+} // namespace D3D11

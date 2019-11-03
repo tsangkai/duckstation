@@ -232,6 +232,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32-debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">
     <ClCompile>
@@ -258,6 +261,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32-debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -281,6 +287,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32-debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">
     <ClCompile>
@@ -307,6 +316,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32-debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -334,6 +346,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTCG|Win32'">
     <ClCompile>
@@ -361,6 +376,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -388,6 +406,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseLTCG|x64'">
     <ClCompile>
@@ -415,6 +436,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)dep\msvc\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
