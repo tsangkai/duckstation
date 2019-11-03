@@ -640,7 +640,11 @@ std::string GPU_HW_ShaderGen::GenerateVRAMWriteFragmentShader()
 {
   int2 coords = int2(v_pos.xy) / int2(RESOLUTION_SCALE, RESOLUTION_SCALE);
   int2 offset = coords - u_base_coords;
-  offset.y = u_size.y - offset.y - 1;
+
+  #if API_OPENGL
+    // Lower-left origin flip for OpenGL
+    offset.y = u_size.y - offset.y - 1;
+  #endif
 
   int buffer_offset = u_buffer_base_offset + (offset.y * u_size.x) + offset.x;
   uint value = LOAD_TEXTURE_BUFFER(samp0, buffer_offset).r;

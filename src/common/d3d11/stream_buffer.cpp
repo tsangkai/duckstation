@@ -75,7 +75,8 @@ StreamBuffer::MappingResult StreamBuffer::Map(ID3D11DeviceContext* context, u32 
     return {};
   }
 
-  return MappingResult{sr.pData, m_position, m_position / alignment, (m_size - m_position) / alignment};
+  return MappingResult{static_cast<char*>(sr.pData) + m_position, m_position, m_position / alignment,
+                       (m_size - m_position) / alignment};
 }
 
 void StreamBuffer::Unmap(ID3D11DeviceContext* context, u32 used_size)
@@ -84,4 +85,4 @@ void StreamBuffer::Unmap(ID3D11DeviceContext* context, u32 used_size)
   m_position += used_size;
 }
 
-} // namespace D3D
+} // namespace D3D11
