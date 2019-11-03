@@ -36,12 +36,47 @@ bool GPU_HW_D3D11::Initialize(HostDisplay* host_display, System* system, DMA* dm
   if (!m_device || !m_context)
     return false;
 
-  CreateFramebuffer();
-  CreateVertexBuffer();
-  CreateUniformBuffer();
-  CreateTextureBuffer();
-  if (!CompileShaders() || !CreateBatchInputLayout())
+  if (!CreateFramebuffer())
+  {
+    Log_ErrorPrintf("Failed to create framebuffer");
     return false;
+  }
+
+  if (!CreateVertexBuffer())
+  {
+    Log_ErrorPrintf("Failed to create vertex buffer");
+    return false;
+  }
+
+  if (!CreateUniformBuffer())
+  {
+    Log_ErrorPrintf("Failed to create uniform buffer");
+    return false;
+  }
+
+  if (!CreateTextureBuffer())
+  {
+    Log_ErrorPrintf("Failed to create texture buffer");
+    return false;
+  }
+
+  if (!CreateStateObjects())
+  {
+    Log_ErrorPrintf("Failed to create state objects");
+    return false;
+  }
+
+  if (!CreateBatchInputLayout())
+  {
+    Log_ErrorPrintf("Failed to create batch input layout");
+    return false;
+  }
+
+  if (!CompileShaders())
+  {
+    Log_ErrorPrintf("Failed to compile shaders");
+    return false;
+  }
 
   RestoreGraphicsAPIState();
   return true;
@@ -70,19 +105,15 @@ void GPU_HW_D3D11::ResetGraphicsAPIState()
 
 void GPU_HW_D3D11::RestoreGraphicsAPIState()
 {
-#if 0
-  m_vram_texture->BindFramebuffer(GL_DRAW_FRAMEBUFFER);
-  glViewport(0, 0, m_vram_texture->GetWidth(), m_vram_texture->GetHeight());
+  m_context->IASetInputLayout(m_batch_input_layout.Get());
+  m_context->OMSetDepthStencilState(m_depth_disabled_state.Get(), 0);
+  m_context->OMSetRenderTargets(1, m_vram_texture.GetD3DRTVArray(), nullptr);
 
-  glDisable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_SCISSOR_TEST);
-  glDepthMask(GL_FALSE);
-  glLineWidth(static_cast<float>(m_resolution_scale));
+  const CD3D11_VIEWPORT vp(0.0f, 0.0f, static_cast<float>(m_vram_texture.GetWidth()),
+                           static_cast<float>(m_vram_texture.GetHeight()));
+  m_context->RSSetViewports(1, &vp);
+  m_context->RSSetState(m_cull_none_rasterizer_state.Get());
   UpdateDrawingArea();
-
-  glBindVertexArray(m_vao_id);
-#endif
 }
 
 void GPU_HW_D3D11::UpdateSettings()
