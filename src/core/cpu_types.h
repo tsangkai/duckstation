@@ -4,6 +4,12 @@
 
 namespace CPU {
 
+// Memory address mask used for fetching as well as loadstores (removes cached/uncached/user/kernel bits).
+enum : PhysicalMemoryAddress
+{
+  PHYSICAL_MEMORY_ADDRESS_MASK = 0x1FFFFFFF
+};
+
 enum class Reg : u8
 {
   zero,

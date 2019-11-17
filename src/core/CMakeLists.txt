@@ -11,6 +11,8 @@ add_library(core
     cpu_core.inl
     cpu_disasm.cpp
     cpu_disasm.h
+    cpu_recompiler.cpp
+    cpu_recompiler.h
     cpu_types.h
     digital_controller.cpp
     digital_controller.h

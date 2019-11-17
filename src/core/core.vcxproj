@@ -40,6 +40,7 @@
     <ClCompile Include="cdrom.cpp" />
     <ClCompile Include="cpu_core.cpp" />
     <ClCompile Include="cpu_disasm.cpp" />
+    <ClCompile Include="cpu_recompiler.cpp" />
     <ClCompile Include="digital_controller.cpp" />
     <ClCompile Include="gpu_commands.cpp" />
     <ClCompile Include="gpu_hw_d3d11.cpp" />
@@ -67,6 +68,7 @@
     <ClInclude Include="cdrom.h" />
     <ClInclude Include="cpu_core.h" />
     <ClInclude Include="cpu_disasm.h" />
+    <ClInclude Include="cpu_recompiler.h" />
     <ClInclude Include="digital_controller.h" />
     <ClInclude Include="gpu_hw_d3d11.h" />
     <ClInclude Include="gpu_hw_shadergen.h" />

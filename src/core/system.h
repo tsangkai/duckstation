@@ -10,6 +10,7 @@ class StateWrapper;
 
 namespace CPU {
 class Core;
+class Recompiler;
 }
 
 class Bus;
@@ -97,6 +98,7 @@ private:
 
   HostInterface* m_host_interface;
   std::unique_ptr<CPU::Core> m_cpu;
+  std::unique_ptr<CPU::Recompiler> m_cpu_recompiler;
   std::unique_ptr<Bus> m_bus;
   std::unique_ptr<DMA> m_dma;
   std::unique_ptr<InterruptController> m_interrupt_controller;

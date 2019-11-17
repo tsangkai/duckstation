@@ -38,3 +38,9 @@ enum class GPURenderer : u8
   Software,
   Count
 };
+
+enum : u32
+{
+  RECOMPILER_CODE_PAGE_SIZE = 1024,
+  RECOMPILER_CODE_PAGE_COUNT = 0x200000 / RECOMPILER_CODE_PAGE_SIZE
+};

@@ -25,6 +25,13 @@ TickCount Bus::DoRAMAccess(u32 offset, u32& value)
   }
   else
   {
+    const u32 page_index = offset / RECOMPILER_CODE_PAGE_SIZE;
+    if (m_ram_code_bits[page_index])
+    {
+      m_ram_code_bits[page_index] = false;
+      m_code_invalidate_callback(page_index);
+    }
+
     if constexpr (size == MemoryAccessSize::Byte)
     {
       m_ram[offset] = Truncate8(value);
@@ -77,6 +84,11 @@ TickCount Bus::DoBIOSAccess(u32 offset, u32& value)
 template<MemoryAccessType type, MemoryAccessSize size>
 TickCount Bus::DispatchAccess(PhysicalMemoryAddress address, u32& value)
 {
+  /*if (address == 0x0000E27C)
+  {
+    if (type == MemoryAccessType::Write)
+      __debugbreak();
+  }*/
   if (address < 0x800000)
   {
     return DoRAMAccess<type, size>(address, value);

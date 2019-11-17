@@ -4,6 +4,8 @@
 #include "common/bitfield.h"
 #include "types.h"
 #include <array>
+#include <bitset>
+#include <functional>
 
 class StateWrapper;
 
@@ -51,6 +53,36 @@ public:
 
   // changing interfaces
   void SetGPU(GPU* gpu) { m_gpu = gpu; }
+
+  /// Returns the address which should be used for code caching (i.e. removes mirrors).
+  ALWAYS_INLINE static PhysicalMemoryAddress UnmirrorAddress(PhysicalMemoryAddress address)
+  {
+    // RAM
+    if (address < 0x800000)
+      return address & UINT32_C(0x1FFFFF);
+    else
+      return address;
+  }
+
+  /// Returns true if the address specified is cacheable (RAM or BIOS).
+  ALWAYS_INLINE static bool IsCacheableAddress(PhysicalMemoryAddress address)
+  {
+    return (address < RAM_MIRROR_END) || (address >= BIOS_BASE && address < (BIOS_BASE + BIOS_SIZE));
+  }
+
+  /// Returns true if the address specified is writable (RAM).
+  static bool IsRAMAddress(PhysicalMemoryAddress address) { return address < RAM_MIRROR_END; }
+
+  /// Flags a RAM region as code, so we know when to invalidate blocks.
+  void SetRAMCodePage(u32 index) { m_ram_code_bits[index] = true; }
+
+  // TODO: Remove this
+  void SetCodeInvalidateCallback(std::function<void(PhysicalMemoryAddress)> callback)
+  {
+    m_code_invalidate_callback = std::move(callback);
+  }
+
+  void ClearRAMCodePageFlags() { m_ram_code_bits.reset(); }
 
 private:
   enum : u32
@@ -220,8 +252,10 @@ private:
   std::array<TickCount, 3> m_cdrom_access_time = {};
   std::array<TickCount, 3> m_spu_access_time = {};
 
-  std::array<u8, 2097152> m_ram{}; // 2MB RAM
-  std::array<u8, 524288> m_bios{}; // 512K BIOS ROM
+  std::function<void(PhysicalMemoryAddress)> m_code_invalidate_callback;
+  std::bitset<RECOMPILER_CODE_PAGE_COUNT> m_ram_code_bits{};
+  std::array<u8, RAM_SIZE> m_ram{};   // 2MB RAM
+  std::array<u8, BIOS_SIZE> m_bios{}; // 512K BIOS ROM
   std::vector<u8> m_exp1_rom;
 
   MEMCTRL m_MEMCTRL = {};

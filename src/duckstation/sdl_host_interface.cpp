@@ -1472,6 +1472,7 @@ void SDLHostInterface::DoModifyInternalResolution(s32 increment)
 
 void SDLHostInterface::Run()
 {
+  DoStartBIOS();
   m_audio_stream->PauseOutput(false);
 
   while (!m_quit_request)

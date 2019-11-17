@@ -12,6 +12,8 @@ class Bus;
 
 namespace CPU {
 
+class Recompiler;
+
 class Core
 {
 public:
@@ -20,6 +22,8 @@ public:
   static constexpr PhysicalMemoryAddress DCACHE_LOCATION_MASK = UINT32_C(0xFFFFFC00);
   static constexpr PhysicalMemoryAddress DCACHE_OFFSET_MASK = UINT32_C(0x000003FF);
   static constexpr PhysicalMemoryAddress DCACHE_SIZE = UINT32_C(0x00000400);
+  
+  friend Recompiler;
 
   Core();
   ~Core();
@@ -141,6 +145,7 @@ private:
   bool m_current_instruction_was_branch_taken = false;
   bool m_next_instruction_is_branch_delay_slot = false;
   bool m_branch_was_taken = false;
+  bool m_exception_raised = false;
 
   // load delays
   Reg m_load_delay_reg = Reg::count;

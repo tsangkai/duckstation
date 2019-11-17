@@ -33,7 +33,6 @@ void WriteToExecutionLog(const char* format, ...)
   va_end(ap);
 }
 
-
 Core::Core() = default;
 
 Core::~Core() = default;
@@ -320,6 +319,7 @@ void Core::RaiseException(Exception excode, u32 EPC, bool BD, bool BT, u8 CE)
 
   // flush the pipeline - we don't want to execute the previously fetched instruction
   m_regs.npc = GetExceptionVector(excode);
+  m_exception_raised = true;
   FlushPipeline();
 }
 
@@ -346,7 +346,9 @@ bool Core::DispatchInterrupts()
   if (!do_interrupt)
     return false;
 
-  RaiseException(Exception::INT);
+  // Interrupt raising occurs before the start of the instruction.
+  RaiseException(Exception::INT, m_regs.pc, m_next_instruction_is_branch_delay_slot, m_branch_was_taken,
+                 m_next_instruction.cop.cop_n);
   return true;
 }
 
@@ -366,9 +368,15 @@ void Core::FlushPipeline()
   // not in a branch delay slot
   m_branch_was_taken = false;
   m_next_instruction_is_branch_delay_slot = false;
+  m_current_instruction_pc = m_regs.pc;
 
   // prefetch the next instruction
   FetchInstruction();
+
+  // and set it as the next one to execute
+  m_current_instruction.bits = m_next_instruction.bits;
+  m_current_instruction_in_branch_delay_slot = false;
+  m_current_instruction_was_branch_taken = false;
 }
 
 u32 Core::ReadReg(Reg rs)
@@ -567,6 +575,8 @@ void Core::Execute()
 {
   while (m_downcount >= 0)
   {
+    DispatchInterrupts();
+
     m_pending_ticks += 1;
     m_downcount -= 1;
 
@@ -577,9 +587,10 @@ void Core::Execute()
     m_current_instruction_was_branch_taken = m_branch_was_taken;
     m_next_instruction_is_branch_delay_slot = false;
     m_branch_was_taken = false;
+    m_exception_raised = false;
 
     // fetch the next instruction
-    if (DispatchInterrupts() || !FetchInstruction())
+    if (!FetchInstruction())
       continue;
 
 #if 0 // GTE flag test debugging
@@ -621,9 +632,10 @@ void Core::ExecuteInstruction()
   const Instruction inst = m_current_instruction;
 
 #if 0
-  if (inst_pc == 0xBFC06FF0)
+  if (m_current_instruction_pc == 0x8005A358)
   {
     TRACE_EXECUTION = true;
+    LOG_EXECUTION = true;
     __debugbreak();
   }
 #endif
