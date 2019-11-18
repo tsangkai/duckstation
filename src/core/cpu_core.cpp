@@ -27,7 +27,7 @@ void WriteToExecutionLog(const char* format, ...)
   if (log_file)
   {
     std::vfprintf(log_file, format, ap);
-    std::fflush(log_file);
+    //std::fflush(log_file);
   }
 
   va_end(ap);
@@ -333,23 +333,25 @@ void Core::ClearExternalInterrupt(u8 bit)
   m_cop0_regs.cause.Ip &= static_cast<u8>(~(1u << bit));
 }
 
-bool Core::DispatchInterrupts()
+bool Core::HasPendingInterrupt()
+{
+  // const bool do_interrupt = m_cop0_regs.sr.IEc && ((m_cop0_regs.cause.Ip & m_cop0_regs.sr.Im) != 0);
+  const bool do_interrupt =
+    m_cop0_regs.sr.IEc && (((m_cop0_regs.cause.bits & m_cop0_regs.sr.bits) & (UINT32_C(0xFF) << 8)) != 0);
+  
+  return do_interrupt;
+}
+
+void Core::DispatchInterrupt()
 {
   // If the instruction we're about to execute is a GTE instruction, delay dispatching the interrupt until the next
   // instruction. For some reason, if we don't do this, we end up with incorrectly sorted polygons and flickering..
   if (m_next_instruction.IsCop2Instruction())
-    return false;
-
-  // const bool do_interrupt = m_cop0_regs.sr.IEc && ((m_cop0_regs.cause.Ip & m_cop0_regs.sr.Im) != 0);
-  const bool do_interrupt =
-    m_cop0_regs.sr.IEc && (((m_cop0_regs.cause.bits & m_cop0_regs.sr.bits) & (UINT32_C(0xFF) << 8)) != 0);
-  if (!do_interrupt)
-    return false;
+    return;
 
   // Interrupt raising occurs before the start of the instruction.
   RaiseException(Exception::INT, m_regs.pc, m_next_instruction_is_branch_delay_slot, m_branch_was_taken,
                  m_next_instruction.cop.cop_n);
-  return true;
 }
 
 void Core::FlushLoadDelay()
@@ -575,7 +577,8 @@ void Core::Execute()
 {
   while (m_downcount >= 0)
   {
-    DispatchInterrupts();
+    if (HasPendingInterrupt())
+      DispatchInterrupt();
 
     m_pending_ticks += 1;
     m_downcount -= 1;
@@ -632,20 +635,20 @@ void Core::ExecuteInstruction()
   const Instruction inst = m_current_instruction;
 
 #if 0
-  if (m_current_instruction_pc == 0x8005A358)
+  if (m_current_instruction_pc == 0xBFC06FF0)
   {
-    TRACE_EXECUTION = true;
+    //TRACE_EXECUTION = true;
     LOG_EXECUTION = true;
     __debugbreak();
   }
 #endif
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
   if (TRACE_EXECUTION)
     PrintInstruction(inst.bits, m_current_instruction_pc, this);
   if (LOG_EXECUTION)
     LogInstruction(inst.bits, m_current_instruction_pc, this);
-#endif
+//#endif
 
   switch (inst.op)
   {

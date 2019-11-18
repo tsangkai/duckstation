@@ -6,7 +6,7 @@
 #include "cdrom.h"
 #include "common/state_wrapper.h"
 #include "cpu_core.h"
-#include "cpu_recompiler.h"
+#include "cpu_code_cache.h"
 #include "dma.h"
 #include "gpu.h"
 #include "host_interface.h"
@@ -34,7 +34,7 @@ System::System(HostInterface* host_interface) : m_host_interface(host_interface)
   m_mdec = std::make_unique<MDEC>();
   m_region = host_interface->GetSettings().region;
 
-  m_cpu_recompiler = std::make_unique<CPU::Recompiler>(m_cpu.get(), m_bus.get());
+  m_cpu_code_cache = std::make_unique<CPU::CodeCache>(m_cpu.get(), m_bus.get());
 }
 
 System::~System() = default;
@@ -239,7 +239,7 @@ bool System::DoState(StateWrapper& sw)
     return false;
 
   if (sw.IsReading())
-    m_cpu_recompiler->Reset();
+    m_cpu_code_cache->Reset();
 
   if (!sw.DoMarker("Bus") || !m_bus->DoState(sw))
     return false;
@@ -274,7 +274,7 @@ bool System::DoState(StateWrapper& sw)
 void System::Reset()
 {
   m_cpu->Reset();
-  m_cpu_recompiler->Reset();
+  m_cpu_code_cache->Reset();
   m_bus->Reset();
   m_dma->Reset();
   m_interrupt_controller->Reset();
@@ -307,7 +307,7 @@ void System::RunFrame()
   while (current_frame_number == m_frame_number)
   {
     //m_cpu->Execute();
-    m_cpu_recompiler->Execute();
+    m_cpu_code_cache->Execute();
     Synchronize();
   }
 }

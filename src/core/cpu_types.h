@@ -9,6 +9,10 @@ enum : PhysicalMemoryAddress
 {
   PHYSICAL_MEMORY_ADDRESS_MASK = 0x1FFFFFFF
 };
+enum : u32
+{
+  INSTRUCTION_SIZE = sizeof(u32)
+};
 
 enum class Reg : u8
 {
@@ -46,6 +50,8 @@ enum class Reg : u8
   ra,
   count
 };
+
+const char* GetRegName(Reg reg);
 
 enum class InstructionOp : u8
 {
@@ -197,6 +203,12 @@ union Instruction
     return (op == InstructionOp::cop2 || op == InstructionOp::lwc2 || op == InstructionOp::swc2);
   }
 };
+
+// Instruction helpers.
+bool IsExitBlockInstruction(const Instruction& instruction, bool* is_branch);
+bool CanInstructionTrap(const Instruction& instruction, bool in_user_mode);
+bool IsLoadDelayingInstruction(const Instruction& instruction);
+bool IsInvalidInstruction(const Instruction& instruction);
 
 struct Registers
 {
@@ -353,6 +365,54 @@ struct Cop0Registers
 
     static constexpr u32 WRITE_MASK = 0b1111'1111'1000'0000'1111'0000'0011'1111;
   } dcic;
+};
+
+union CodeBlockKey
+{
+  u32 bits;
+
+  BitField<u32, bool, 0, 1> user_mode;
+  BitField<u32, u32, 2, 30> aligned_pc;
+
+  ALWAYS_INLINE u32 GetPC() const { return aligned_pc << 2; }
+  ALWAYS_INLINE void SetPC(u32 pc) { aligned_pc = pc >> 2; }
+
+  ALWAYS_INLINE CodeBlockKey& operator=(const CodeBlockKey& rhs)
+  {
+    bits = rhs.bits;
+    return *this;
+  }
+
+  ALWAYS_INLINE bool operator==(const CodeBlockKey& rhs) const { return bits == rhs.bits; }
+  ALWAYS_INLINE bool operator!=(const CodeBlockKey& rhs) const { return bits != rhs.bits; }
+  ALWAYS_INLINE bool operator<(const CodeBlockKey& rhs) const { return bits < rhs.bits; }
+};
+
+struct CodeBlockInstruction
+{
+  Instruction instruction;
+  u32 pc;
+  bool is_branch_delay_slot;
+  bool is_load_delay_slot;
+  bool can_trap;
+};
+
+struct CodeBlock
+{
+  CodeBlockKey key;
+
+  std::vector<CodeBlockInstruction> instructions;
+
+  void* code;
+  size_t code_size;
+
+  const u32 GetPC() const { return key.GetPC(); }
+  const u32 GetSizeInBytes() const { return static_cast<u32>(instructions.size()) * sizeof(Instruction); }
+  const u32 GetStartPageIndex() const { return (key.GetPC() / RECOMPILER_CODE_PAGE_SIZE); }
+  const u32 GetEndPageIndex() const
+  {
+    return ((key.GetPC() + GetSizeInBytes() + (RECOMPILER_CODE_PAGE_SIZE - 1)) / RECOMPILER_CODE_PAGE_SIZE);
+  }
 };
 
 } // namespace CPU

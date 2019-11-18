@@ -1,203 +1,62 @@
-#include "cpu_recompiler.h"
+#include "cpu_code_cache.h"
 #include "YBaseLib/Log.h"
 #include "cpu_core.h"
 #include "cpu_disasm.h"
-Log_SetChannel(CPU::Recompiler);
+#include "cpu_recompiler_code_generator.h"
+#include "cpu_recompiler_thunks.h"
+Log_SetChannel(CPU::CodeCache);
 
 namespace CPU {
 
 extern bool TRACE_EXECUTION;
 extern bool LOG_EXECUTION;
+static bool USE_RECOMPILER = true;
 
-Recompiler::Recompiler(Core* core, Bus* bus) : m_core(core), m_bus(bus)
+CodeCache::CodeCache(Core* core, Bus* bus) : m_core(core), m_bus(bus)
 {
-  bus->SetCodeInvalidateCallback(std::bind(&Recompiler::FlushBlocks, this, std::placeholders::_1));
+  bus->SetCodeInvalidateCallback(std::bind(&CodeCache::FlushBlocks, this, std::placeholders::_1));
+
+  m_code_buffer = std::make_unique<JitCodeBuffer>();
+  m_asm_functions = std::make_unique<Recompiler::ASMFunctions>();
+  m_asm_functions->Generate(m_code_buffer.get());
 }
 
-Recompiler::~Recompiler() = default;
+CodeCache::~CodeCache() = default;
 
-bool Recompiler::IsExitBlockInstruction(const Instruction& instruction, bool* is_branch)
-{
-  switch (instruction.op)
-  {
-    case InstructionOp::j:
-    case InstructionOp::jal:
-    case InstructionOp::b:
-    case InstructionOp::beq:
-    case InstructionOp::bgtz:
-    case InstructionOp::blez:
-    case InstructionOp::bne:
-      *is_branch = true;
-      return true;
-
-    case InstructionOp::funct:
-    {
-      switch (instruction.r.funct)
-      {
-        case InstructionFunct::jr:
-        case InstructionFunct::jalr:
-          *is_branch = true;
-          return true;
-
-        case InstructionFunct::syscall:
-        case InstructionFunct::break_:
-          *is_branch = false;
-          return true;
-
-        default:
-          *is_branch = false;
-          return false;
-      }
-    }
-
-    default:
-      *is_branch = false;
-      return false;
-  }
-}
-
-bool Recompiler::CanInstructionTrap(const Instruction& instruction, bool in_user_mode)
-{
-  switch (instruction.op)
-  {
-    case InstructionOp::lui:
-    case InstructionOp::andi:
-    case InstructionOp::ori:
-    case InstructionOp::xori:
-    case InstructionOp::addiu:
-    case InstructionOp::slti:
-    case InstructionOp::sltiu:
-    case InstructionOp::j:
-    case InstructionOp::jal:
-    case InstructionOp::beq:
-    case InstructionOp::bne:
-    case InstructionOp::bgtz:
-    case InstructionOp::blez:
-    case InstructionOp::b:
-      return false;
-
-    case InstructionOp::cop0:
-    case InstructionOp::cop2:
-    case InstructionOp::lwc2:
-    case InstructionOp::swc2:
-      return in_user_mode;
-
-      // swc0/lwc0/cop1/cop3 are essentially no-ops
-    case InstructionOp::cop1:
-    case InstructionOp::cop3:
-    case InstructionOp::lwc0:
-    case InstructionOp::lwc1:
-    case InstructionOp::lwc3:
-    case InstructionOp::swc0:
-    case InstructionOp::swc1:
-    case InstructionOp::swc3:
-      return false;
-
-    case InstructionOp::addi:
-    case InstructionOp::lb:
-    case InstructionOp::lh:
-    case InstructionOp::lw:
-    case InstructionOp::lbu:
-    case InstructionOp::lhu:
-    case InstructionOp::lwl:
-    case InstructionOp::lwr:
-    case InstructionOp::sb:
-    case InstructionOp::sh:
-    case InstructionOp::sw:
-    case InstructionOp::swl:
-    case InstructionOp::swr:
-      return true;
-
-    case InstructionOp::funct:
-    {
-      switch (instruction.r.funct)
-      {
-        case InstructionFunct::sll:
-        case InstructionFunct::srl:
-        case InstructionFunct::sra:
-        case InstructionFunct::sllv:
-        case InstructionFunct::srlv:
-        case InstructionFunct::srav:
-        case InstructionFunct::and_:
-        case InstructionFunct::or_:
-        case InstructionFunct::xor_:
-        case InstructionFunct::nor:
-        case InstructionFunct::addu:
-        case InstructionFunct::subu:
-        case InstructionFunct::slt:
-        case InstructionFunct::sltu:
-        case InstructionFunct::mfhi:
-        case InstructionFunct::mthi:
-        case InstructionFunct::mflo:
-        case InstructionFunct::mtlo:
-        case InstructionFunct::mult:
-        case InstructionFunct::multu:
-        case InstructionFunct::div:
-        case InstructionFunct::divu:
-        case InstructionFunct::jr:
-        case InstructionFunct::jalr:
-          return false;
-
-        case InstructionFunct::add:
-        case InstructionFunct::sub:
-        case InstructionFunct::syscall:
-        case InstructionFunct::break_:
-        default:
-          return true;
-      }
-    }
-
-    default:
-      return true;
-  }
-}
-
-bool Recompiler::IsLoadDelayingInstruction(const Instruction& instruction)
-{
-  switch (instruction.op)
-  {
-    case InstructionOp::lb:
-    case InstructionOp::lh:
-    case InstructionOp::lw:
-    case InstructionOp::lbu:
-    case InstructionOp::lhu:
-      return true;
-
-    case InstructionOp::lwl:
-    case InstructionOp::lwr:
-      return false;
-
-    default:
-      return false;
-  }
-}
-
-bool Recompiler::IsInvalidInstruction(const Instruction& instruction)
-{
-  // TODO
-  return true;
-}
-
-void Recompiler::Execute()
+void CodeCache::Execute()
 {
   while (m_core->m_downcount >= 0)
   {
-    // fetch the next instruction
-    m_core->DispatchInterrupts();
+    if (m_core->HasPendingInterrupt())
+    {
+      // TODO: Fill in m_next_instruction...
+      m_core->DispatchInterrupt();
+    }
 
-    const CodeBlock* block = GetNextBlock();
-    if (!block)
+    m_current_block = GetNextBlock();
+    if (!m_current_block)
     {
       Log_WarningPrintf("Falling back to uncached interpreter at 0x%08X", m_core->GetRegs().pc);
       InterpretUncachedBlock();
       continue;
     }
 
-    InterpretCachedBlock(*block);
+    if (USE_RECOMPILER)
+      static_cast<Recompiler::BlockFunctionType>(m_current_block->code)(m_core);
+    else
+      InterpretCachedBlock(*m_current_block);
+
+    if (m_current_block_flushed)
+    {
+      m_current_block_flushed = false;
+      delete m_current_block;
+    }
+
+    m_current_block = nullptr;
   }
 }
 
-void Recompiler::Reset()
+void CodeCache::Reset()
 {
   m_bus->ClearRAMCodePageFlags();
   for (auto& it : m_ram_block_map)
@@ -206,7 +65,7 @@ void Recompiler::Reset()
   m_blocks.clear();
 }
 
-const CPU::CodeBlock* Recompiler::GetNextBlock()
+const CPU::CodeBlock* CodeCache::GetNextBlock()
 {
   const u32 address = m_bus->UnmirrorAddress(m_core->m_regs.pc & UINT32_C(0x1FFFFFFF));
 
@@ -216,11 +75,11 @@ const CPU::CodeBlock* Recompiler::GetNextBlock()
 
   BlockMap::iterator iter = m_blocks.find(key.bits);
   if (iter != m_blocks.end())
-    return iter->second.get();
+    return iter->second;
 
-  std::unique_ptr<CodeBlock> block = std::make_unique<CodeBlock>();
+  CodeBlock* block = new CodeBlock();
   block->key = key;
-  if (CompileBlock(block.get()))
+  if (CompileBlock(block))
   {
     // insert into the page map
     if (m_bus->IsRAMAddress(address))
@@ -229,7 +88,7 @@ const CPU::CodeBlock* Recompiler::GetNextBlock()
       const u32 end_page = block->GetEndPageIndex();
       for (u32 page = start_page; page < end_page; page++)
       {
-        m_ram_block_map[page].push_back(block.get());
+        m_ram_block_map[page].push_back(block);
         m_bus->SetRAMCodePage(page);
       }
     }
@@ -239,11 +98,11 @@ const CPU::CodeBlock* Recompiler::GetNextBlock()
     Log_ErrorPrintf("Failed to compile block at PC=0x%08X", address);
   }
 
-  iter = m_blocks.emplace(key.bits, std::move(block)).first;
-  return iter->second.get();
+  iter = m_blocks.emplace(key.bits, block).first;
+  return block;
 }
 
-bool Recompiler::CompileBlock(CodeBlock* block)
+bool CodeCache::CompileBlock(CodeBlock* block)
 {
   u32 pc = block->GetPC();
   bool is_branch_delay_slot = false;
@@ -299,10 +158,20 @@ bool Recompiler::CompileBlock(CodeBlock* block)
     return false;
   }
 
+  if (USE_RECOMPILER)
+  {
+    Recompiler::CodeGenerator codegen(m_core, m_code_buffer.get(), *m_asm_functions.get());
+    if (!codegen.CompileBlock(block, &block->code, &block->code_size))
+    {
+      Log_ErrorPrintf("Failed to compile host code for block at 0x%08X", block->key.GetPC());
+      return false;
+    }
+  }
+
   return true;
 }
 
-void Recompiler::FlushBlocks(u32 page_index)
+void CodeCache::FlushBlocks(u32 page_index)
 {
   DebugAssert(page_index < RECOMPILER_CODE_PAGE_COUNT);
   auto& blocks = m_ram_block_map[page_index];
@@ -310,10 +179,10 @@ void Recompiler::FlushBlocks(u32 page_index)
     FlushBlock(blocks.back());
 }
 
-void Recompiler::FlushBlock(CodeBlock* block)
+void CodeCache::FlushBlock(CodeBlock* block)
 {
   BlockMap::iterator iter = m_blocks.find(block->key.GetPC());
-  Assert(iter != m_blocks.end() && iter->second.get() == block);
+  Assert(iter != m_blocks.end() && iter->second == block);
   Log_DevPrintf("Flushing block at address 0x%08X", block->GetPC());
 
   // remove from the page map
@@ -329,9 +198,20 @@ void Recompiler::FlushBlock(CodeBlock* block)
 
   // remove from block map
   m_blocks.erase(iter);
+
+  // flushing block currently executing?
+  if (m_current_block == block)
+  {
+    Log_WarningPrintf("Flushing currently-executing block 0x%08X", block->GetPC());
+    m_current_block_flushed = true;
+  }
+  else
+  {
+    delete block;
+  }
 }
 
-void Recompiler::InterpretCachedBlock(const CodeBlock& block)
+void CodeCache::InterpretCachedBlock(const CodeBlock& block)
 {
   // set up the state so we've already fetched the instruction
   DebugAssert((m_core->m_regs.pc & PHYSICAL_MEMORY_ADDRESS_MASK) == block.GetPC());
@@ -371,7 +251,7 @@ void Recompiler::InterpretCachedBlock(const CodeBlock& block)
   m_core->m_next_instruction_is_branch_delay_slot = false;
 }
 
-void Recompiler::InterpretUncachedBlock()
+void CodeCache::InterpretUncachedBlock()
 {
   // At this point, pc contains the last address executed (in the previous block). The instruction has not been fetched
   // yet. pc shouldn't be updated until the fetch occurs, that way the exception occurs in the delay slot.
