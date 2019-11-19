@@ -13,7 +13,7 @@ const char* GetRegName(Reg reg)
   return s_reg_names[static_cast<u8>(reg)];
 }
 
-bool IsExitBlockInstruction(const Instruction& instruction, bool* is_branch)
+bool IsBranchInstruction(const Instruction& instruction)
 {
   switch (instruction.op)
   {
@@ -24,7 +24,6 @@ bool IsExitBlockInstruction(const Instruction& instruction, bool* is_branch)
     case InstructionOp::bgtz:
     case InstructionOp::blez:
     case InstructionOp::bne:
-      *is_branch = true;
       return true;
 
     case InstructionOp::funct:
@@ -33,22 +32,36 @@ bool IsExitBlockInstruction(const Instruction& instruction, bool* is_branch)
       {
         case InstructionFunct::jr:
         case InstructionFunct::jalr:
-          *is_branch = true;
-          return true;
-
-        case InstructionFunct::syscall:
-        case InstructionFunct::break_:
-          *is_branch = false;
           return true;
 
         default:
-          *is_branch = false;
           return false;
       }
     }
 
     default:
-      *is_branch = false;
+      return false;
+  }
+}
+
+bool IsExitBlockInstruction(const Instruction& instruction)
+{
+  switch (instruction.op)
+  {
+    case InstructionOp::funct:
+    {
+      switch (instruction.r.funct)
+      {
+        case InstructionFunct::syscall:
+        case InstructionFunct::break_:
+          return true;
+
+        default:
+          return false;
+      }
+    }
+
+    default:
       return false;
   }
 }

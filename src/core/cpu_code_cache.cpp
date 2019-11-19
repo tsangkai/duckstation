@@ -63,6 +63,7 @@ void CodeCache::Reset()
     it.clear();
 
   m_blocks.clear();
+  m_code_buffer->Reset();
 }
 
 const CPU::CodeBlock* CodeCache::GetNextBlock()
@@ -119,36 +120,40 @@ bool CodeCache::CompileBlock(CodeBlock* block)
     }
 
     cbi.pc = pc;
+    cbi.is_branch = IsBranchInstruction(cbi.instruction);
     cbi.is_branch_delay_slot = is_branch_delay_slot;
     cbi.is_load_delay_slot = is_load_delay_slot;
     cbi.can_trap = CanInstructionTrap(cbi.instruction, m_core->InUserMode());
-
-    // load delay is done now
-    is_load_delay_slot = IsLoadDelayingInstruction(cbi.instruction);
 
     // instruction is decoded now
     block->instructions.push_back(cbi);
     pc += sizeof(cbi.instruction.bits);
 
     // if we're in a branch delay slot, the block is now done
-    if (is_branch_delay_slot)
+    // except if this is a branch in a branch delay slot, then we grab the one after that, and so on...
+    if (is_branch_delay_slot && !cbi.is_branch)
       break;
 
-    // if there is a branch delay slot, grab the instruction for that too, otherwise we're done
-    if (IsExitBlockInstruction(cbi.instruction, &is_branch_delay_slot) && !is_branch_delay_slot)
+    // if this is a branch, we grab the next instruction (delay slot), and then exit
+    is_branch_delay_slot = cbi.is_branch;
+
+    // is this a non-branchy exit? (e.g. syscall)
+    if (IsExitBlockInstruction(cbi.instruction))
       break;
   }
 
   if (!block->instructions.empty())
   {
+    block->instructions.back().is_last_instruction = true;
+
 #ifdef _DEBUG
     SmallString disasm;
     Log_DebugPrintf("Block at 0x%08X", block->GetPC());
     for (const CodeBlockInstruction& cbi : block->instructions)
     {
       CPU::DisassembleInstruction(&disasm, cbi.pc, cbi.instruction.bits, nullptr);
-      Log_DebugPrintf("[%s %s 0x%08X] %s", cbi.is_branch_delay_slot ? "BD" : "  ", cbi.is_load_delay_slot ? "LD" : "  ",
-                      cbi.pc, disasm.GetCharArray());
+      Log_DebugPrintf("[%s %s 0x%08X] %08X %s", cbi.is_branch_delay_slot ? "BD" : "  ",
+                      cbi.is_load_delay_slot ? "LD" : "  ", cbi.pc, cbi.instruction.bits, disasm.GetCharArray());
     }
 #endif
   }
@@ -160,6 +165,13 @@ bool CodeCache::CompileBlock(CodeBlock* block)
 
   if (USE_RECOMPILER)
   {
+    // Ensure we're not going to run out of space while compiling this block.
+    if (m_code_buffer->GetFreeCodeSpace() < (block->instructions.size() * Recompiler::MAX_HOST_BYTES_PER_INSTRUCTION))
+    {
+      Log_WarningPrintf("Out of code space, flushing all blocks.");
+      Reset();
+    }
+
     Recompiler::CodeGenerator codegen(m_core, m_code_buffer.get(), *m_asm_functions.get());
     if (!codegen.CompileBlock(block, &block->code, &block->code_size))
     {
@@ -283,11 +295,14 @@ void CodeCache::InterpretUncachedBlock()
     m_core->m_load_delay_old_value = m_core->m_next_load_delay_old_value;
     m_core->m_next_load_delay_old_value = 0;
 
-    if (m_core->m_exception_raised || in_branch_delay_slot ||
-        (IsExitBlockInstruction(m_core->m_current_instruction, &in_branch_delay_slot) && !in_branch_delay_slot))
+    const bool branch = IsBranchInstruction(m_core->m_current_instruction);
+    if (m_core->m_exception_raised || (!branch && in_branch_delay_slot) ||
+        IsExitBlockInstruction(m_core->m_current_instruction))
     {
       break;
     }
+
+    in_branch_delay_slot = branch;
   }
 }
 

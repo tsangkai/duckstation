@@ -205,7 +205,8 @@ union Instruction
 };
 
 // Instruction helpers.
-bool IsExitBlockInstruction(const Instruction& instruction, bool* is_branch);
+bool IsBranchInstruction(const Instruction& instruction);
+bool IsExitBlockInstruction(const Instruction& instruction);
 bool CanInstructionTrap(const Instruction& instruction, bool in_user_mode);
 bool IsLoadDelayingInstruction(const Instruction& instruction);
 bool IsInvalidInstruction(const Instruction& instruction);
@@ -392,9 +393,12 @@ struct CodeBlockInstruction
 {
   Instruction instruction;
   u32 pc;
-  bool is_branch_delay_slot;
-  bool is_load_delay_slot;
-  bool can_trap;
+
+  bool is_branch : 1;
+  bool is_branch_delay_slot : 1;
+  bool is_load_delay_slot : 1;
+  bool is_last_instruction : 1;
+  bool can_trap : 1;
 };
 
 struct CodeBlock

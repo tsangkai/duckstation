@@ -27,7 +27,7 @@ void WriteToExecutionLog(const char* format, ...)
   if (log_file)
   {
     std::vfprintf(log_file, format, ap);
-    //std::fflush(log_file);
+    std::fflush(log_file);
   }
 
   va_end(ap);

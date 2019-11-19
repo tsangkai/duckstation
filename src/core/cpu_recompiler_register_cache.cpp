@@ -338,6 +338,10 @@ Value RegisterCache::ReadGuestRegister(Reg guest_reg, bool cache /* = true */, b
 Value RegisterCache::ReadGuestRegister(Value& cache_value, Reg guest_reg, bool cache, bool force_host_register,
                                        HostReg forced_host_reg)
 {
+  // register zero is always zero
+  if (guest_reg == Reg::zero)
+    return Value::FromConstantU32(0);
+
   if (cache_value.IsValid())
   {
     if (cache_value.IsInHostRegister())
@@ -428,6 +432,10 @@ Value RegisterCache::WriteGuestRegister(Reg guest_reg, Value&& value)
 
 Value RegisterCache::WriteGuestRegister(Value& cache_value, Reg guest_reg, Value&& value)
 {
+  // ignore writes to register zero
+  if (guest_reg == Reg::zero)
+    return std::move(value);
+
   DebugAssert(value.size == RegSize_32);
   if (cache_value.IsInHostRegister() && value.IsInHostRegister() && cache_value.host_reg == value.host_reg)
   {

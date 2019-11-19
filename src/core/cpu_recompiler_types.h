@@ -35,7 +35,7 @@ constexpr HostReg HostReg_Invalid = static_cast<HostReg>(HostReg_Count);
 constexpr RegSize HostPointerSize = RegSize_64;
 
 // A reasonable "maximum" number of bytes per instruction.
-constexpr u32 MaximumBytesPerInstruction = 128;
+constexpr u32 MAX_HOST_BYTES_PER_INSTRUCTION = 128;
 
 #else
 using HostReg = void;

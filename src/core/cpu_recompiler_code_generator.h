@@ -126,6 +126,7 @@ public:
   Value AddValues(const Value& lhs, const Value& rhs);
   Value MulValues(const Value& lhs, const Value& rhs);
   Value ShlValues(const Value& lhs, const Value& rhs);
+  Value OrValues(const Value& lhs, const Value& rhs);
 
 private:
   // Host register setup
@@ -143,7 +144,9 @@ private:
   void InstructionPrologue(const CodeBlockInstruction& cbi, TickCount cycles,
                            bool force_sync = false);
   void InstructionEpilogue(const CodeBlockInstruction& cbi);
-  void SyncInstructionPointer();
+  void SyncCurrentInstructionPC();
+  void SyncPC();
+  void AddPendingCycles();
 
   //////////////////////////////////////////////////////////////////////////
   // Instruction Code Generators
@@ -151,6 +154,9 @@ private:
   bool CompileInstruction(const CodeBlockInstruction& cbi);
   bool Compile_Fallback(const CodeBlockInstruction& cbi);
   bool Compile_lui(const CodeBlockInstruction& cbi);
+  bool Compile_ori(const CodeBlockInstruction& cbi);
+  bool Compile_sll(const CodeBlockInstruction& cbi);
+  bool Compile_addiu(const CodeBlockInstruction& cbi);
 
   Core* m_cpu;
   JitCodeBuffer* m_code_buffer;
