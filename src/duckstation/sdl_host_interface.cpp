@@ -254,6 +254,7 @@ std::unique_ptr<SDLHostInterface> SDLHostInterface::Create(const char* filename 
 
   intf->UpdateSpeedLimiterState();
   intf->OpenGameControllers();
+  intf->LoadGameList();
 
   const bool boot = (filename != nullptr || exp1_filename != nullptr || save_state_filename != nullptr);
   if (boot)
@@ -613,9 +614,14 @@ void SDLHostInterface::DrawImGui()
   DrawMainMenuBar();
 
   if (m_system)
+  {
     DrawDebugWindows();
+  }
   else
+  {
     DrawPoweredOffWindow();
+    DrawGameListWindow();
+  }
 
   if (m_settings_window_open)
     DrawSettingsWindow();
@@ -964,6 +970,94 @@ void SDLHostInterface::DrawPoweredOffWindow()
 
   ImGui::PopStyleColor(3);
   ImGui::PopStyleVar(2);
+
+  ImGui::End();
+}
+
+void SDLHostInterface::DrawGameListWindow()
+{
+  constexpr int WINDOW_WIDTH = 600;
+  constexpr int WINDOW_HEIGHT = 350;
+
+  ImGui::SetNextWindowSize(ImVec2(WINDOW_WIDTH, WINDOW_HEIGHT));
+  ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f),
+                          ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+  if (!ImGui::Begin("Game List"/*, nullptr,
+                    /*ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse |
+                      ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize |
+                    ImGuiWindowFlags_NoBringToFrontOnFocus*/))
+  {
+    ImGui::End();
+  }
+
+  const float width = ImGui::GetWindowContentRegionWidth();
+
+  ImGui::Columns(4);
+  ImGui::SetColumnWidth(0, 100.0f);
+  ImGui::SetColumnWidth(1, std::max(width - 100.0f - 100.0f - 100.0f, 1.0f));
+  ImGui::SetColumnWidth(2, 100.0f);
+  ImGui::SetColumnWidth(3, 100.0f);
+
+  ImGui::TextUnformatted("Code");
+  ImGui::NextColumn();
+  ImGui::TextUnformatted("Title");
+  ImGui::NextColumn();
+  ImGui::TextUnformatted("Region");
+  ImGui::NextColumn();
+  ImGui::TextUnformatted("Size");
+  ImGui::NextColumn();
+
+  u32 counter = 0;
+  static u32 game_list_selection = UINT32_C(0xFFFFFFFF);
+  for (const GameList::GameListEntry& it : m_game_list.GetEntries())
+  {
+    if (ImGui::Selectable(TinyString::FromFormat("%s##%u", it.code.c_str(), counter), game_list_selection == counter,
+                          ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_SpanAllColumns))
+    {
+      game_list_selection = counter;
+      if (ImGui::IsMouseDoubleClicked(0))
+        Log_WarningPrintf("Fast boot: '%s'", it.path.c_str());
+    }
+
+    if (ImGui::BeginPopupContextItem("GameList_ContextMenu"))
+    {
+      ImGui::MenuItem(it.title.c_str(), nullptr, nullptr, false);
+      ImGui::Separator();
+
+      ImGui::MenuItem("Disc Information");
+      ImGui::MenuItem("Open Location");
+      ImGui::Separator();
+
+      ImGui::MenuItem("Normal Boot");
+      ImGui::MenuItem("Fast Boot");
+      ImGui::Separator();
+
+      if (ImGui::BeginMenu("Load State"))
+      {
+        for (u32 i = 1; i <= NUM_QUICK_SAVE_STATES; i++)
+          ImGui::MenuItem(TinyString::FromFormat("State %u", i));
+
+        ImGui::EndMenu();
+      }
+
+      ImGui::EndPopup();
+    }
+
+    ImGui::NextColumn();
+    ImGui::TextUnformatted(it.title.c_str());
+    ImGui::NextColumn();
+    ImGui::TextUnformatted(Settings::GetConsoleRegionName(it.region));
+    ImGui::NextColumn();
+    ImGui::Text("%.2f MB", static_cast<double>(it.total_size) / 1048576.0);
+    ImGui::NextColumn();
+
+    counter++;
+  }
+
+  ImGui::Columns(1);
+
+  ImGui::ArrowButton("foo", ImGuiDir_Right);
 
   ImGui::End();
 }
@@ -1488,4 +1582,10 @@ void SDLHostInterface::Run()
 
     DestroySystem();
   }
+}
+
+void SDLHostInterface::LoadGameList()
+{
+  m_game_list.ParseRedumpDatabase("redump.dat");
+  m_game_list.AddDirectory("D:\\PSX\\other2", true);
 }

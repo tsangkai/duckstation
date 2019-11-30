@@ -3,8 +3,9 @@
 #include "YBaseLib/Timer.h"
 #include "common/gl/program.h"
 #include "common/gl/texture.h"
-#include "core/host_interface.h"
+#include "core/game_list.h"
 #include "core/host_display.h"
+#include "core/host_interface.h"
 #include <SDL.h>
 #include <array>
 #include <deque>
@@ -24,7 +25,7 @@ public:
   ~SDLHostInterface();
 
   static std::unique_ptr<SDLHostInterface> Create(const char* filename = nullptr, const char* exp1_filename = nullptr,
-                                              const char* save_state_filename = nullptr);
+                                                  const char* save_state_filename = nullptr);
 
   static TinyString GetSaveStateFilename(u32 index);
 
@@ -54,6 +55,7 @@ private:
   void DestroyDisplay();
   void CreateImGuiContext();
   bool CreateAudioStream();
+  void LoadGameList();
 
   void OpenGameControllers();
   void CloseGameControllers();
@@ -86,6 +88,7 @@ private:
   void DrawQuickSettingsMenu();
   void DrawDebugMenu();
   void DrawPoweredOffWindow();
+  void DrawGameListWindow();
   void DrawSettingsWindow();
   void DrawAboutWindow();
   void DrawDebugWindows();
@@ -107,4 +110,6 @@ private:
   bool m_focus_main_menu_bar = false;
   bool m_settings_window_open = false;
   bool m_about_window_open = false;
+
+  GameList m_game_list;
 };
