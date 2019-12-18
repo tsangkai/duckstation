@@ -28,7 +28,7 @@ union CodeBlockKey
   ALWAYS_INLINE u32 GetPC() const { return aligned_pc << 2; }
   ALWAYS_INLINE void SetPC(u32 pc) { aligned_pc = pc >> 2; }
 
-  ALWAYS_INLINE u32 GetPCPhysicalAddress() const { return (aligned_pc << 2) & BUS_ADDRESS_MASK; }
+  ALWAYS_INLINE u32 GetPCPhysicalAddress() const { return (aligned_pc << 2) & PHYSICAL_MEMORY_ADDRESS_MASK; }
 
   ALWAYS_INLINE CodeBlockKey& operator=(const CodeBlockKey& rhs)
   {

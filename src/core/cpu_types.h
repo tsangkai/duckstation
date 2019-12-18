@@ -9,7 +9,7 @@ class Core;
 // Memory address mask used for fetching as well as loadstores (removes cached/uncached/user/kernel bits).
 enum : PhysicalMemoryAddress
 {
-  BUS_ADDRESS_MASK = 0x1FFFFFFF
+  PHYSICAL_MEMORY_ADDRESS_MASK = 0x1FFFFFFF
 };
 enum : u32
 {

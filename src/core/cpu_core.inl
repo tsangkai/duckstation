@@ -19,8 +19,11 @@ TickCount Core::DoMemoryAccess(VirtualMemoryAddress address, u32& value)
       }
 
       const PhysicalMemoryAddress phys_addr = address & UINT32_C(0x1FFFFFFF);
-      if ((phys_addr & SCRATCHPAD_LOCATION_MASK) == SCRATCHPAD_LOCATION)
-        return m_bus->DoScratchpadAccess<type, size>(phys_addr & SCRATCHPAD_OFFSET_MASK, value);
+      if ((phys_addr & DCACHE_LOCATION_MASK) == DCACHE_LOCATION)
+      {
+        DoScratchpadAccess<type, size>(phys_addr, value);
+        return 0;
+      }
 
       return m_bus->DispatchAccess<type, size>(phys_addr, value);
     }
@@ -42,8 +45,11 @@ TickCount Core::DoMemoryAccess(VirtualMemoryAddress address, u32& value)
       }
 
       const PhysicalMemoryAddress phys_addr = address & UINT32_C(0x1FFFFFFF);
-      if ((phys_addr & SCRATCHPAD_LOCATION_MASK) == SCRATCHPAD_LOCATION)
-        return m_bus->DoScratchpadAccess<type, size>(phys_addr & SCRATCHPAD_OFFSET_MASK, value);
+      if ((phys_addr & DCACHE_LOCATION_MASK) == DCACHE_LOCATION)
+      {
+        DoScratchpadAccess<type, size>(phys_addr, value);
+        return 0;
+      }
 
       return m_bus->DispatchAccess<type, size>(phys_addr, value);
     }
@@ -101,6 +107,40 @@ bool CPU::Core::DoAlignmentCheck(VirtualMemoryAddress address)
   m_cop0_regs.BadVaddr = address;
   RaiseException(type == MemoryAccessType::Read ? Exception::AdEL : Exception::AdES);
   return false;
+}
+
+template<MemoryAccessType type, MemoryAccessSize size>
+void CPU::Core::DoScratchpadAccess(PhysicalMemoryAddress address, u32& value)
+{
+  const PhysicalMemoryAddress cache_offset = address & DCACHE_OFFSET_MASK;
+  if constexpr (size == MemoryAccessSize::Byte)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+      value = ZeroExtend32(m_dcache[cache_offset]);
+    else
+      m_dcache[cache_offset] = Truncate8(value);
+  }
+  else if constexpr (size == MemoryAccessSize::HalfWord)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+    {
+      u16 temp;
+      std::memcpy(&temp, &m_dcache[cache_offset], sizeof(temp));
+      value = ZeroExtend32(temp);
+    }
+    else
+    {
+      u16 temp = Truncate16(value);
+      std::memcpy(&m_dcache[cache_offset], &temp, sizeof(temp));
+    }
+  }
+  else if constexpr (size == MemoryAccessSize::Word)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+      std::memcpy(&value, &m_dcache[cache_offset], sizeof(value));
+    else
+      std::memcpy(&m_dcache[cache_offset], &value, sizeof(value));
+  }
 }
 
 } // namespace CPU

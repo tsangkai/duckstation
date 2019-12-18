@@ -205,7 +205,7 @@ bool CodeCache::RevalidateBlock(CodeBlock* block)
   for (const CodeBlockInstruction& cbi : block->instructions)
   {
     u32 new_code = 0;
-    m_bus->DispatchAccess<MemoryAccessType::Read, MemoryAccessSize::Word>(cbi.pc & BUS_ADDRESS_MASK,
+    m_bus->DispatchAccess<MemoryAccessType::Read, MemoryAccessSize::Word>(cbi.pc & PHYSICAL_MEMORY_ADDRESS_MASK,
                                                                           new_code);
     if (cbi.instruction.bits != new_code)
     {
@@ -251,7 +251,7 @@ bool CodeCache::CompileBlock(CodeBlock* block)
   {
     CodeBlockInstruction cbi = {};
 
-    const PhysicalMemoryAddress phys_addr = pc & BUS_ADDRESS_MASK;
+    const PhysicalMemoryAddress phys_addr = pc & PHYSICAL_MEMORY_ADDRESS_MASK;
     if (!m_bus->IsCacheableAddress(phys_addr) ||
         m_bus->DispatchAccess<MemoryAccessType::Read, MemoryAccessSize::Word>(phys_addr, cbi.instruction.bits) < 0 ||
         !IsInvalidInstruction(cbi.instruction))

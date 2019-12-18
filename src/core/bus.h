@@ -45,9 +45,6 @@ public:
   template<MemoryAccessType type, MemoryAccessSize size>
   TickCount DispatchAccess(PhysicalMemoryAddress address, u32& value);
 
-  template<MemoryAccessType type, MemoryAccessSize size>
-  TickCount DoScratchpadAccess(PhysicalMemoryAddress address, u32& value);
-
   // Optimized variant for burst/multi-word read/writing.
   TickCount ReadWords(PhysicalMemoryAddress address, u32* words, u32 word_count);
   TickCount WriteWords(PhysicalMemoryAddress address, const u32* words, u32 word_count);
@@ -96,9 +93,6 @@ private:
     EXP1_BASE = 0x1F000000,
     EXP1_SIZE = 0x800000,
     EXP1_MASK = EXP1_SIZE - 1,
-    SCRATCHPAD_BASE = 0x1F800000,
-    SCRATCHPAD_SIZE = 0x00000400,
-    SCRATCHPAD_MASK = 0x000003FF,
     MEMCTRL_BASE = 0x1F801000,
     MEMCTRL_SIZE = 0x40,
     MEMCTRL_MASK = MEMCTRL_SIZE - 1,
@@ -268,9 +262,8 @@ private:
   std::array<TickCount, 3> m_spu_access_time = {};
 
   std::bitset<CPU_CODE_CACHE_PAGE_COUNT> m_ram_code_bits{};
-  std::array<u8, RAM_SIZE> m_ram{};           // 2MB RAM
-  std::array<u8, SCRATCHPAD_SIZE> m_scratchpad{}; // 1K Scratchpad (CPU Data Cache)
-  std::array<u8, BIOS_SIZE> m_bios{};         // 512K BIOS ROM
+  std::array<u8, RAM_SIZE> m_ram{};   // 2MB RAM
+  std::array<u8, BIOS_SIZE> m_bios{}; // 512K BIOS ROM
   std::vector<u8> m_exp1_rom;
 
   MEMCTRL m_MEMCTRL = {};
