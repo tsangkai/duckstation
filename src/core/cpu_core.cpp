@@ -3,6 +3,7 @@
 #include "common/state_wrapper.h"
 #include "common/align.h"
 #include "cpu_disasm.h"
+#include "system.h"
 #include <cstdio>
 Log_SetChannel(CPU::Core);
 
@@ -38,8 +39,9 @@ Core::Core() = default;
 
 Core::~Core() = default;
 
-void Core::Initialize(Bus* bus)
+void Core::Initialize(System* system, Bus* bus)
 {
+  m_system = system;
   m_bus = bus;
 
   // From nocash spec.
@@ -522,7 +524,7 @@ void Core::WriteCop0Reg(Cop0Reg reg, u32 value)
 
 void Core::WriteCacheControl(u32 value)
 {
-  Log_WarningPrintf("Cache control <- 0x%08X", value);
+  Log_WarningPrintf("Tick %d: Cache control <- 0x%08X", m_system->GetGlobalTickCounter() + GetPendingTicks(), value);
   m_cache_control = value;
 }
 

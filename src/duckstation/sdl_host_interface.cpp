@@ -1271,6 +1271,13 @@ void SDLHostInterface::DrawSettingsWindow()
           m_system->UpdateCPUExecutionMode();
       }
 
+      if (ImGui::Checkbox("Fastmem", &m_settings.cpu_fastmem))
+      {
+        if (m_system)
+          m_system->UpdateCPUExecutionMode();
+        settings_changed = true;
+      }
+
       ImGui::EndTabItem();
     }
 

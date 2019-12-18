@@ -8,6 +8,7 @@ void Settings::SetDefaults()
 {
   region = ConsoleRegion::Auto;
   cpu_execution_mode = CPUExecutionMode::Interpreter;
+  cpu_fastmem = true;
 
   speed_limiter_enabled = true;
   start_paused = false;
@@ -46,6 +47,7 @@ void Settings::Load(SettingsInterface& si)
 
   cpu_execution_mode = ParseCPUExecutionMode(si.GetStringValue("CPU", "ExecutionMode", "Interpreter").c_str())
                          .value_or(CPUExecutionMode::Interpreter);
+  cpu_fastmem = si.GetBoolValue("CPU", "Fastmem", true);
 
   gpu_renderer =
     ParseRendererName(si.GetStringValue("GPU", "Renderer", "OpenGL").c_str()).value_or(GPURenderer::HardwareOpenGL);
@@ -84,6 +86,7 @@ void Settings::Save(SettingsInterface& si) const
   si.SetBoolValue("General", "StartPaused", start_paused);
 
   si.SetStringValue("CPU", "ExecutionMode", GetCPUExecutionModeName(cpu_execution_mode));
+  si.SetBoolValue("CPU", "Fastmem", cpu_fastmem);
 
   si.SetStringValue("GPU", "Renderer", GetRendererName(gpu_renderer));
   si.SetIntValue("GPU", "ResolutionScale", static_cast<long>(gpu_resolution_scale));

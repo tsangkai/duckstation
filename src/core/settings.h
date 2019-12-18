@@ -34,6 +34,7 @@ struct Settings
   ConsoleRegion region = ConsoleRegion::Auto;
 
   CPUExecutionMode cpu_execution_mode = CPUExecutionMode::Interpreter;
+  bool cpu_fastmem = true;
 
   bool start_paused = false;
   bool speed_limiter_enabled = true;

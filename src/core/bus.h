@@ -1,5 +1,6 @@
 #pragma once
 #include "common/bitfield.h"
+#include "common/memory_arena.h"
 #include "types.h"
 #include <array>
 #include <bitset>
@@ -27,63 +28,6 @@ class System;
 class Bus
 {
 public:
-  Bus();
-  ~Bus();
-
-  void Initialize(CPU::Core* cpu, CPU::CodeCache* cpu_code_cache, DMA* dma, InterruptController* interrupt_controller,
-                  GPU* gpu, CDROM* cdrom, Pad* pad, Timers* timers, SPU* spu, MDEC* mdec, SIO* sio);
-  void Reset();
-  bool DoState(StateWrapper& sw);
-
-  bool ReadByte(PhysicalMemoryAddress address, u8* value);
-  bool ReadHalfWord(PhysicalMemoryAddress address, u16* value);
-  bool ReadWord(PhysicalMemoryAddress address, u32* value);
-  bool WriteByte(PhysicalMemoryAddress address, u8 value);
-  bool WriteHalfWord(PhysicalMemoryAddress address, u16 value);
-  bool WriteWord(PhysicalMemoryAddress address, u32 value);
-
-  template<MemoryAccessType type, MemoryAccessSize size>
-  TickCount DispatchAccess(PhysicalMemoryAddress address, u32& value);
-
-  // Optimized variant for burst/multi-word read/writing.
-  TickCount ReadWords(PhysicalMemoryAddress address, u32* words, u32 word_count);
-  TickCount WriteWords(PhysicalMemoryAddress address, const u32* words, u32 word_count);
-
-  void SetExpansionROM(std::vector<u8> data);
-  void SetBIOS(const std::vector<u8>& image);
-
-  // changing interfaces
-  void SetGPU(GPU* gpu) { m_gpu = gpu; }
-
-  /// Returns the address which should be used for code caching (i.e. removes mirrors).
-  ALWAYS_INLINE static PhysicalMemoryAddress UnmirrorAddress(PhysicalMemoryAddress address)
-  {
-    // RAM
-    if (address < 0x800000)
-      return address & UINT32_C(0x1FFFFF);
-    else
-      return address;
-  }
-
-  /// Returns true if the address specified is cacheable (RAM or BIOS).
-  ALWAYS_INLINE static bool IsCacheableAddress(PhysicalMemoryAddress address)
-  {
-    return (address < RAM_MIRROR_END) || (address >= BIOS_BASE && address < (BIOS_BASE + BIOS_SIZE));
-  }
-
-  /// Returns true if the address specified is writable (RAM).
-  ALWAYS_INLINE static bool IsRAMAddress(PhysicalMemoryAddress address) { return address < RAM_MIRROR_END; }
-
-  /// Flags a RAM region as code, so we know when to invalidate blocks.
-  ALWAYS_INLINE void SetRAMCodePage(u32 index) { m_ram_code_bits[index] = true; }
-
-  /// Unflags a RAM region as code, the code cache will no longer be notified when writes occur.
-  ALWAYS_INLINE void ClearRAMCodePage(u32 index) { m_ram_code_bits[index] = false; }
-
-  /// Clears all code bits for RAM regions.
-  ALWAYS_INLINE void ClearRAMCodePageFlags() { m_ram_code_bits.reset(); }
-
-private:
   enum : u32
   {
     RAM_BASE = 0x00000000,
@@ -145,6 +89,99 @@ private:
     RAM_WRITE_ACCESS_DELAY = 0, // Writes are free unless we're executing more than 4 stores in a row.
   };
 
+  enum : size_t
+  {
+    // Our memory arena contains storage for RAM and BIOS.
+    MEMORY_ARENA_SIZE = RAM_SIZE + BIOS_SIZE,
+
+    // Offsets within the memory arena.
+    MEMORY_ARENA_RAM_OFFSET = 0,
+    MEMORY_ARENA_BIOS_OFFSET = MEMORY_ARENA_RAM_OFFSET + RAM_SIZE,
+
+    // Fastmem region size is 4GB to cover the entire 32-bit address space.
+    FASTMEM_REGION_SIZE = UINT64_C(0x100000000)
+  };
+
+  Bus();
+  ~Bus();
+
+  u8* GetFastmemBase() const { return m_fastmem_base; }
+
+  bool AllocateMemory();
+  void UpdateFastmemViews(bool enabled, bool isolate_cache);
+
+  void Initialize(CPU::Core* cpu, CPU::CodeCache* cpu_code_cache, DMA* dma, InterruptController* interrupt_controller,
+                  GPU* gpu, CDROM* cdrom, Pad* pad, Timers* timers, SPU* spu, MDEC* mdec, SIO* sio);
+  void Reset();
+  bool DoState(StateWrapper& sw);
+
+  bool ReadByte(PhysicalMemoryAddress address, u8* value);
+  bool ReadHalfWord(PhysicalMemoryAddress address, u16* value);
+  bool ReadWord(PhysicalMemoryAddress address, u32* value);
+  bool WriteByte(PhysicalMemoryAddress address, u8 value);
+  bool WriteHalfWord(PhysicalMemoryAddress address, u16 value);
+  bool WriteWord(PhysicalMemoryAddress address, u32 value);
+
+  template<MemoryAccessType type, MemoryAccessSize size>
+  TickCount DispatchAccess(PhysicalMemoryAddress address, u32& value);
+
+  // Optimized variant for burst/multi-word read/writing.
+  TickCount ReadWords(PhysicalMemoryAddress address, u32* words, u32 word_count);
+  TickCount WriteWords(PhysicalMemoryAddress address, const u32* words, u32 word_count);
+
+  void SetExpansionROM(std::vector<u8> data);
+  void SetBIOS(const std::vector<u8>& image);
+
+  // changing interfaces
+  void SetGPU(GPU* gpu) { m_gpu = gpu; }
+
+  /// Returns the address which should be used for code caching (i.e. removes mirrors).
+  ALWAYS_INLINE static PhysicalMemoryAddress UnmirrorAddress(PhysicalMemoryAddress address)
+  {
+    // RAM
+    if (address < 0x800000)
+      return address & UINT32_C(0x1FFFFF);
+    else
+      return address;
+  }
+
+  /// Returns true if the address specified is cacheable (RAM or BIOS).
+  ALWAYS_INLINE static bool IsCacheableAddress(PhysicalMemoryAddress address)
+  {
+    return (address < RAM_MIRROR_END) || (address >= BIOS_BASE && address < (BIOS_BASE + BIOS_SIZE));
+  }
+
+  /// Returns true if the address specified is writable (RAM).
+  ALWAYS_INLINE static bool IsRAMAddress(PhysicalMemoryAddress address) { return address < RAM_MIRROR_END; }
+
+  /// Returns the code page index for a RAM address.
+  ALWAYS_INLINE static u32 GetRAMCodePageIndex(PhysicalMemoryAddress address)
+  {
+    return UnmirrorAddress(address) / CPU_CODE_CACHE_PAGE_SIZE;
+  }
+
+  /// Returns true if the specified page contains code.
+  ALWAYS_INLINE bool IsRAMCodePage(u32 index) { return m_ram_code_bits[index]; }
+
+  /// Flags a RAM region as code, so we know when to invalidate blocks.
+  void SetRAMCodePage(u32 index);
+
+  /// Unflags a RAM region as code, the code cache will no longer be notified when writes occur.
+  void ClearRAMCodePage(u32 index);
+
+  /// Clears all code bits for RAM regions.
+  void ClearRAMCodePageFlags();
+
+  /// Returns true if the specified address is in a code page.
+  ALWAYS_INLINE bool IsCodePageAddress(PhysicalMemoryAddress address) const
+  {
+    return IsRAMAddress(address) ? m_ram_code_bits[UnmirrorAddress(address) / CPU_CODE_CACHE_PAGE_SIZE] : false;
+  }
+
+  /// Returns true if the range specified overlaps with a code page.
+  bool HasCodePagesInRange(PhysicalMemoryAddress start_address, u32 size) const;
+
+private:
   union MEMDELAY
   {
     u32 bits;
@@ -242,6 +279,10 @@ private:
   void DoWriteSPU(MemoryAccessSize size, u32 offset, u32 value);
 
   void DoInvalidateCodeCache(u32 page_index);
+  void SetCodePageFastmemProtection(u32 page_index, bool writable);
+
+  u8* m_ram = nullptr;
+  u8* m_bios = nullptr;
 
   CPU::Core* m_cpu = nullptr;
   CPU::CodeCache* m_cpu_code_cache = nullptr;
@@ -262,14 +303,16 @@ private:
   std::array<TickCount, 3> m_spu_access_time = {};
 
   std::bitset<CPU_CODE_CACHE_PAGE_COUNT> m_ram_code_bits{};
-  std::array<u8, RAM_SIZE> m_ram{};   // 2MB RAM
-  std::array<u8, BIOS_SIZE> m_bios{}; // 512K BIOS ROM
   std::vector<u8> m_exp1_rom;
 
   MEMCTRL m_MEMCTRL = {};
   u32 m_ram_size_reg = 0;
 
   std::string m_tty_line_buffer;
+
+  Common::MemoryArena m_memory_arena;
+  u8* m_fastmem_base = nullptr;
+  std::vector<Common::MemoryArena::View> m_fastmem_ram_views;
 };
 
 #include "bus.inl"
