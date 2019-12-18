@@ -24,10 +24,10 @@ class Core
 {
 public:
   static constexpr VirtualMemoryAddress RESET_VECTOR = UINT32_C(0xBFC00000);
-  static constexpr PhysicalMemoryAddress DCACHE_LOCATION = UINT32_C(0x1F800000);
-  static constexpr PhysicalMemoryAddress DCACHE_LOCATION_MASK = UINT32_C(0xFFFFFC00);
-  static constexpr PhysicalMemoryAddress DCACHE_OFFSET_MASK = UINT32_C(0x000003FF);
-  static constexpr PhysicalMemoryAddress DCACHE_SIZE = UINT32_C(0x00000400);
+  static constexpr PhysicalMemoryAddress SCRATCHPAD_LOCATION = UINT32_C(0x1F800000);
+  static constexpr PhysicalMemoryAddress SCRATCHPAD_LOCATION_MASK = UINT32_C(0xFFFFFC00);
+  static constexpr PhysicalMemoryAddress SCRATCHPAD_OFFSET_MASK = UINT32_C(0x000003FF);
+  static constexpr PhysicalMemoryAddress SCRATCHPAD_SIZE = UINT32_C(0x00000400);
 
   friend CodeCache;
   friend Recompiler::CodeGenerator;
@@ -78,9 +78,6 @@ private:
 
   template<MemoryAccessType type, MemoryAccessSize size>
   bool DoAlignmentCheck(VirtualMemoryAddress address);
-
-  template<MemoryAccessType type, MemoryAccessSize size>
-  void DoScratchpadAccess(PhysicalMemoryAddress address, u32& value);
 
   bool ReadMemoryByte(VirtualMemoryAddress addr, u8* value);
   bool ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value);
@@ -167,9 +164,6 @@ private:
 
   u32 m_cache_control = 0;
   System* m_system = nullptr;
-
-  // data cache (used as scratchpad)
-  std::array<u8, DCACHE_SIZE> m_dcache = {};
 
   GTE::Core m_cop2;
 };

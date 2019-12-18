@@ -49,6 +49,41 @@ TickCount Bus::DoRAMAccess(u32 offset, u32& value)
 }
 
 template<MemoryAccessType type, MemoryAccessSize size>
+TickCount Bus::DoScratchpadAccess(u32 offset, u32& value)
+{
+  if constexpr (size == MemoryAccessSize::Byte)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+      value = ZeroExtend32(m_scratchpad[offset]);
+    else
+      m_scratchpad[offset] = Truncate8(value);
+  }
+  else if constexpr (size == MemoryAccessSize::HalfWord)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+    {
+      u16 temp;
+      std::memcpy(&temp, &m_scratchpad[offset], sizeof(temp));
+      value = ZeroExtend32(temp);
+    }
+    else
+    {
+      u16 temp = Truncate16(value);
+      std::memcpy(&m_scratchpad[offset], &temp, sizeof(temp));
+    }
+  }
+  else if constexpr (size == MemoryAccessSize::Word)
+  {
+    if constexpr (type == MemoryAccessType::Read)
+      std::memcpy(&value, &m_scratchpad[offset], sizeof(value));
+    else
+      std::memcpy(&m_scratchpad[offset], &value, sizeof(value));
+  }
+
+  return 0;
+}
+
+template<MemoryAccessType type, MemoryAccessSize size>
 TickCount Bus::DoBIOSAccess(u32 offset, u32& value)
 {
   // TODO: Configurable mirroring.

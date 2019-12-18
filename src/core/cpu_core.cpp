@@ -98,7 +98,6 @@ bool Core::DoState(StateWrapper& sw)
   sw.Do(&m_next_load_delay_reg);
   sw.Do(&m_next_load_delay_value);
   sw.Do(&m_cache_control);
-  sw.DoBytes(m_dcache.data(), m_dcache.size());
 
   if (!m_cop2.DoState(sw))
     return false;
