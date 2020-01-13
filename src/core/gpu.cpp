@@ -1,6 +1,6 @@
 #include "gpu.h"
-#include "common/log.h"
 #include "common/heap_array.h"
+#include "common/log.h"
 #include "common/state_wrapper.h"
 #include "dma.h"
 #include "host_interface.h"
@@ -27,6 +27,8 @@ bool GPU::Initialize(HostDisplay* host_display, System* system, DMA* dma, Interr
   m_interrupt_controller = interrupt_controller;
   m_timers = timers;
   m_force_progressive_scan = m_system->GetSettings().gpu_force_progressive_scan;
+  m_tick_event =
+    m_system->CreateTimingEvent("GPU Tick", 1, 1, std::bind(&GPU::Execute, this, std::placeholders::_1), true);
   return true;
 }
 
@@ -363,6 +365,15 @@ void GPU::UpdateCRTCConfig()
 
 void GPU::UpdateSliceTicks()
 {
+  // figure out how many GPU ticks until the next vblank
+  const u32 lines_until_vblank =
+    (m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end ?
+       (m_crtc_state.vertical_total - m_crtc_state.current_scanline + m_crtc_state.vertical_display_end) :
+       (m_crtc_state.vertical_display_end - m_crtc_state.current_scanline));
+  const TickCount ticks_until_vblank =
+    lines_until_vblank * m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline;
+
+#if 0
   // the next event is at the end of the next scanline
 #if 1
   TickCount ticks_until_next_event;
@@ -378,10 +389,11 @@ void GPU::UpdateSliceTicks()
     ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) * m_crtc_state.horizontal_total) -
     m_crtc_state.current_tick_in_scanline;
 #endif
+#endif
 
   // convert to master clock, rounding up as we want to overshoot not undershoot
-  const TickCount system_ticks = (ticks_until_next_event * 7 + 10) / 11;
-  m_system->SetDowncount(system_ticks);
+  const TickCount system_ticks = (ticks_until_vblank * 7 + 10) / 11;
+  m_tick_event->Schedule(system_ticks);
 }
 
 void GPU::Execute(TickCount ticks)

@@ -51,6 +51,7 @@ public:
   ALWAYS_INLINE void ResetPendingTicks() { m_pending_ticks = 0; }
   ALWAYS_INLINE void AddPendingTicks(TickCount ticks) { m_pending_ticks += ticks; }
 
+  ALWAYS_INLINE TickCount GetDowncount() const { return m_downcount; }
   ALWAYS_INLINE void SetDowncount(TickCount downcount)
   {
     m_downcount = (downcount < m_downcount) ? downcount : m_downcount;

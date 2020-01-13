@@ -1,6 +1,7 @@
 #pragma once
-#include "types.h"
 #include "host_interface.h"
+#include "timing_event.h"
+#include "types.h"
 #include <memory>
 #include <optional>
 
@@ -11,7 +12,7 @@ class StateWrapper;
 namespace CPU {
 class Core;
 class CodeCache;
-}
+} // namespace CPU
 
 class Bus;
 class DMA;
@@ -27,6 +28,8 @@ class SIO;
 
 class System
 {
+  friend TimingEvent;
+
 public:
   ~System();
 
@@ -76,6 +79,9 @@ public:
   // Adds ticks to the global tick counter, simulating the CPU being stalled.
   void StallCPU(TickCount ticks);
 
+  /// Returns pending time from the CPU (which we haven't executed yet)
+  TickCount GetPendingTicks() const;
+
   // Access controllers for simulating input.
   Controller* GetController(u32 slot) const;
   void UpdateControllers();
@@ -86,6 +92,10 @@ public:
   bool InsertMedia(const char* path);
   void RemoveMedia();
 
+  /// Creates a new event.
+  std::unique_ptr<TimingEvent> CreateTimingEvent(const char* name, TickCount period, TickCount interval,
+                                                 TimingEventCallback callback, bool activate);
+
 private:
   System(HostInterface* host_interface);
 
@@ -93,6 +103,32 @@ private:
   bool CreateGPU();
 
   void InitializeComponents();
+
+  // Active event management
+  void AddActiveEvent(TimingEvent* event);
+  void RemoveActiveEvent(TimingEvent* event);
+  void SortEvents();
+
+  // Runs any pending events. Call when CPU downcount is zero.
+  void RunEvents();
+
+  // Updates the downcount of the CPU (event scheduling).
+  void UpdateCPUDowncount();
+
+  bool DoEventsState(StateWrapper& sw);
+
+  // Event lookup, use with care.
+  // If you modify an event, call SortEvents afterwards.
+  TimingEvent* FindActiveEvent(const char* name);
+
+  // Event enumeration, use with care.
+  // Don't remove an event while enumerating the list, as it will invalidate the iterator.
+  template<typename T>
+  void EnumerateActiveEvents(T callback) const
+  {
+    for (const TimingEvent* ev : m_events)
+      callback(ev);
+  }
 
   HostInterface* m_host_interface;
   std::unique_ptr<CPU::Core> m_cpu;
@@ -112,4 +148,9 @@ private:
   u32 m_frame_number = 1;
   u32 m_internal_frame_number = 1;
   u32 m_global_tick_counter = 0;
+
+  std::vector<TimingEvent*> m_events;
+  u32 m_last_event_run_time = 0;
+  bool m_running_events = false;
+  bool m_events_need_sorting = false;
 };

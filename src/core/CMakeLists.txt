@@ -63,6 +63,8 @@ add_library(core
     system.h
     timers.cpp
     timers.h
+    timing_event.cpp
+    timing_event.h
     types.h
 )
 

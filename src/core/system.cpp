@@ -421,13 +421,9 @@ void System::Synchronize()
   m_cpu->ResetDowncount();
 
   m_global_tick_counter += static_cast<u32>(pending_ticks);
+  RunEvents();
 
-  m_gpu->Execute(pending_ticks);
   m_timers->Execute(pending_ticks);
-  m_cdrom->Execute(pending_ticks);
-  m_pad->Execute(pending_ticks);
-  m_spu->Execute(pending_ticks);
-  m_mdec->Execute(pending_ticks);
   m_dma->Execute(pending_ticks);
 }
 
@@ -439,6 +435,13 @@ void System::SetDowncount(TickCount downcount)
 void System::StallCPU(TickCount ticks)
 {
   m_cpu->AddPendingTicks(ticks);
+  if (m_cpu->GetPendingTicks() >= m_cpu->GetDowncount() && !m_running_events)
+    Synchronize();
+}
+
+TickCount System::GetPendingTicks() const
+{
+  return m_cpu->GetPendingTicks();
 }
 
 Controller* System::GetController(u32 slot) const
@@ -500,4 +503,218 @@ bool System::InsertMedia(const char* path)
 void System::RemoveMedia()
 {
   m_cdrom->RemoveMedia();
+}
+
+std::unique_ptr<TimingEvent> System::CreateTimingEvent(const char* name, TickCount period, TickCount interval,
+                                                       TimingEventCallback callback, bool activate)
+{
+  std::unique_ptr<TimingEvent> event = std::make_unique<TimingEvent>(this, name, period, interval, std::move(callback));
+  if (activate)
+    event->Activate();
+
+  return event;
+}
+
+static bool CompareEvents(const TimingEvent* lhs, const TimingEvent* rhs)
+{
+  return lhs->GetDownCount() > rhs->GetDownCount();
+}
+
+void System::AddActiveEvent(TimingEvent* event)
+{
+  m_events.push_back(event);
+  if (!m_running_events)
+  {
+    std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
+    UpdateCPUDowncount();
+  }
+  else
+  {
+    m_events_need_sorting = true;
+  }
+}
+
+void System::RemoveActiveEvent(TimingEvent* event)
+{
+  auto iter = std::find_if(m_events.begin(), m_events.end(), [event](const auto& it) { return event == it; });
+  if (iter == m_events.end())
+  {
+    Panic("Attempt to remove inactive event");
+    return;
+  }
+
+  m_events.erase(iter);
+  if (!m_running_events)
+  {
+    std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
+    UpdateCPUDowncount();
+  }
+  else
+  {
+    m_events_need_sorting = true;
+  }
+}
+
+void System::SortEvents()
+{
+  if (!m_running_events)
+  {
+    std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
+    UpdateCPUDowncount();
+  }
+  else
+  {
+    m_events_need_sorting = true;
+  }
+}
+
+void System::RunEvents()
+{
+  DebugAssert(!m_running_events);
+  if (m_events.empty())
+  {
+    // on the off chance that we don't have any events...
+    m_last_event_run_time = m_global_tick_counter;
+    return;
+  }
+
+  TickCount remaining_time = static_cast<TickCount>(m_global_tick_counter - m_last_event_run_time);
+  if (remaining_time < m_events.front()->GetDownCount())
+  {
+    // no need to run events yet.
+    m_cpu->SetDowncount(m_events.front()->GetDownCount() - remaining_time);
+    return;
+  }
+
+  m_running_events = true;
+
+  while (remaining_time > 0)
+  {
+    // To avoid issues where two events are related to each other from becoming desynced,
+    // we run at a slice that is the length of the lowest next event time.
+    TickCount time = std::min(remaining_time, m_events.front()->GetDownCount());
+    remaining_time -= time;
+    m_last_event_run_time += time;
+
+    // Apply downcount to all events.
+    // This will result in a negative downcount for those events which are late.
+    for (TimingEvent* evt : m_events)
+    {
+      evt->m_downcount = evt->m_downcount - time;
+      evt->m_time_since_last_run += time;
+    }
+
+    // Now we can actually run the callbacks.
+    while (!m_events.empty() && m_events.front()->GetDownCount() <= 0)
+    {
+      TimingEvent* evt = m_events.front();
+      TickCount ticks_late = -evt->m_downcount;
+      std::pop_heap(m_events.begin(), m_events.end(), CompareEvents);
+
+      // Don't include overrun cycles in the execution.
+      // If the late time is greater than (period * interval), we'll re-place us at the front (or near)
+      // the front of the queue again, and submit the next iteration then. This should reduce issues where
+      // multiple events are dependent on one another, that may be caused if all cycles were executed at once.
+      TickCount ticks_to_execute = (evt->m_time_since_last_run - ticks_late);
+      DebugAssert(ticks_to_execute >= 0);
+
+      // Factor late time into the time for the next invocation.
+      evt->m_downcount += evt->m_interval;
+      evt->m_time_since_last_run -= ticks_to_execute;
+
+      // The cycles_late is only an indicator, it doesn't modify the cycles to execute.
+      evt->m_callback(ticks_to_execute, ticks_late);
+
+      // Place it in the appropriate position in the queue.
+      if (m_events_need_sorting)
+      {
+        // Another event may have been changed by this event, or the interval/downcount changed.
+        std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
+        m_events_need_sorting = false;
+      }
+      else
+      {
+        // Keep the event list in a heap. The event we just serviced will be in the last place,
+        // so we can use push_here instead of make_heap, which should be faster.
+        std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
+      }
+    }
+  }
+
+  DebugAssert(m_last_event_run_time == m_global_tick_counter);
+  m_running_events = false;
+  UpdateCPUDowncount();
+}
+
+void System::UpdateCPUDowncount()
+{
+  if (!m_events.empty())
+    m_cpu->SetDowncount(m_events.front()->GetDownCount());
+  else
+    m_cpu->SetDowncount(std::numeric_limits<TickCount>::max());
+}
+
+bool System::DoEventsState(StateWrapper& sw)
+{
+  if (sw.IsReading())
+  {
+    // Load timestamps for the clock events.
+    // Any oneshot events should be recreated by the load state method, so we can fix up their times here.
+    u32 event_count = 0;
+    sw.Do(&event_count);
+
+    for (u32 i = 0; i < event_count; i++)
+    {
+      std::string event_name;
+      TickCount downcount, time_since_last_run, period, interval;
+      sw.Do(&event_name);
+      sw.Do(&downcount);
+      sw.Do(&time_since_last_run);
+      sw.Do(&period);
+      sw.Do(&interval);
+      if (sw.HasError())
+        return false;
+
+      TimingEvent* event = FindActiveEvent(event_name.c_str());
+      if (!event)
+      {
+        Log_WarningPrintf("Save state has event '%s', but couldn't find this event when loading.", event_name.c_str());
+        continue;
+      }
+
+      // Using reschedule is safe here since we call sort afterwards.
+      event->m_downcount = downcount;
+      event->m_time_since_last_run = time_since_last_run;
+      event->m_period = period;
+      event->m_interval = interval;
+    }
+
+    Log_DevPrintf("Loaded %u events from save state.", event_count);
+    SortEvents();
+  }
+  else
+  {
+    u32 event_count = static_cast<u32>(m_events.size());
+    sw.Do(&event_count);
+
+    for (TimingEvent* evt : m_events)
+    {
+      sw.Do(&evt->m_name);
+      sw.Do(&evt->m_downcount);
+      sw.Do(&evt->m_time_since_last_run);
+      sw.Do(&evt->m_period);
+      sw.Do(&evt->m_interval);
+    }
+
+    Log_DevPrintf("Wrote %u events to save state.", event_count);
+  }
+
+  return !sw.HasError();
+}
+
+TimingEvent* System::FindActiveEvent(const char* name)
+{
+  auto iter = std::find_if(m_events.begin(), m_events.end(), [&name](auto& ev) { return ev->GetName().compare(name); });
+
+  return (iter != m_events.end()) ? *iter : nullptr;
 }

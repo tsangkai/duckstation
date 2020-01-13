@@ -2,11 +2,13 @@
 #include "common/bitfield.h"
 #include "types.h"
 #include <array>
+#include <memory>
 #include <vector>
 
 class StateWrapper;
 
 class System;
+class TimingEvent;
 class Bus;
 class InterruptController;
 class GPU;
@@ -91,6 +93,7 @@ private:
   SPU* m_spu = nullptr;
   MDEC* m_mdec = nullptr;
 
+  std::unique_ptr<TimingEvent> m_transfer_event;
   std::vector<u32> m_transfer_buffer;
 
   struct ChannelState
