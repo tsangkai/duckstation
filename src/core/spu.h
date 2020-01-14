@@ -281,7 +281,6 @@ private:
 
   void ReadADPCMBlock(u16 address, ADPCMBlock* block);
   std::tuple<s32, s32> SampleVoice(u32 voice_index);
-  void GenerateSample(s16* output_frame);
   void Execute(TickCount ticks);
   void UpdateEventInterval();
 

@@ -114,6 +114,8 @@ u32 Pad::ReadRegister(u32 offset)
   {
     case 0x00: // JOY_DATA
     {
+      m_transfer_event->InvokeEarly();
+
       const u8 value = m_receive_buffer_full ? m_receive_buffer : 0xFF;
       Log_DebugPrintf("JOY_DATA (R) -> 0x%02X%s", ZeroExtend32(value), m_receive_buffer_full ? "" : "(EMPTY)");
       m_receive_buffer_full = false;
@@ -126,6 +128,7 @@ u32 Pad::ReadRegister(u32 offset)
     case 0x04: // JOY_STAT
     {
       const u32 bits = m_JOY_STAT.bits;
+      m_transfer_event->InvokeEarly();
       m_JOY_STAT.ACKINPUT = false;
       return bits;
     }
