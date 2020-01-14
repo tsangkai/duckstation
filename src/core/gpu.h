@@ -126,6 +126,9 @@ public:
   void DMARead(u32* words, u32 word_count);
   void DMAWrite(const u32* words, u32 word_count);
 
+  // Synchronizes the CRTC, updating the hblank timer.
+  void Synchronize();
+
   // Recompile shaders/recreate framebuffers when needed.
   virtual void UpdateSettings();
 

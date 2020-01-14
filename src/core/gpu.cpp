@@ -275,6 +275,11 @@ void GPU::DMAWrite(const u32* words, u32 word_count)
   }
 }
 
+void GPU::Synchronize()
+{
+  m_tick_event->InvokeEarly();
+}
+
 void GPU::UpdateCRTCConfig()
 {
   static constexpr std::array<TickCount, 8> dot_clock_dividers = {{10, 8, 5, 4, 7, 7, 7, 7}};
@@ -359,8 +364,7 @@ void GPU::UpdateCRTCConfig()
 
   // Ensure the numbers are sane, and not due to a misconfigured active display range.
   cs.display_aspect_ratio = (std::isnormal(display_ratio) && display_ratio != 0.0f) ? display_ratio : (4.0f / 3.0f);
-
-  UpdateSliceTicks();
+  m_tick_event->SetInterval(cs.horizontal_total);
 }
 
 void GPU::UpdateSliceTicks()
@@ -372,6 +376,10 @@ void GPU::UpdateSliceTicks()
        (m_crtc_state.vertical_display_end - m_crtc_state.current_scanline));
   const TickCount ticks_until_vblank =
     lines_until_vblank * m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline;
+  const TickCount ticks_until_hblank =
+    (m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_display_end) ?
+      (m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline + m_crtc_state.horizontal_display_end) :
+      (m_crtc_state.horizontal_display_end - m_crtc_state.current_tick_in_scanline);
 
 #if 0
   // the next event is at the end of the next scanline
@@ -391,6 +399,24 @@ void GPU::UpdateSliceTicks()
 #endif
 #endif
 
+  TickCount lines_until_next_event;
+  if (m_crtc_state.in_vblank)
+  {
+    if (m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end)
+      lines_until_next_event =
+        ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) + m_crtc_state.vertical_display_start);
+    else
+      lines_until_next_event =
+        ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) + m_crtc_state.vertical_display_start);
+  }
+  else
+  {
+    lines_until_next_event = m_crtc_state.vertical_display_end - m_crtc_state.current_scanline;
+  }
+
+  const TickCount ticks_until_next_event =
+    (lines_until_next_event * m_crtc_state.horizontal_total) - m_crtc_state.current_tick_in_scanline;
+
   // convert to master clock, rounding up as we want to overshoot not undershoot
   const TickCount system_ticks = (ticks_until_vblank * 7 + 10) / 11;
   m_tick_event->Schedule(system_ticks);
@@ -405,13 +431,76 @@ void GPU::Execute(TickCount ticks)
     m_crtc_state.fractional_ticks = temp % 7;
   }
 
-  while (m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_total)
+  if (m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_total)
   {
-    m_crtc_state.current_tick_in_scanline -= m_crtc_state.horizontal_total;
-    m_crtc_state.current_scanline++;
+    // short path when we execute <1 line.. this shouldn't occur often.
+    const bool old_hblank = m_crtc_state.in_hblank;
+    const bool new_hblank = m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_display_start ||
+                            m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_display_end;
+    if (!old_hblank && new_hblank && m_timers->IsUsingExternalClock(HBLANK_TIMER_INDEX))
+      m_timers->AddTicks(HBLANK_TIMER_INDEX, 1);
+
+    UpdateSliceTicks();
+    return;
+  }
+
+  u32 lines_to_draw = m_crtc_state.current_tick_in_scanline / m_crtc_state.horizontal_total;
+  m_crtc_state.current_tick_in_scanline %= m_crtc_state.horizontal_total;
+#if 0
+  Log_WarningPrintf("Old line: %u, new line: %u, drawing %u", m_crtc_state.current_scanline,
+                    m_crtc_state.current_scanline + lines_to_draw, lines_to_draw);
+#endif
+
+  const bool old_hblank = m_crtc_state.in_hblank;
+  const bool new_hblank = m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_display_start ||
+                          m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_display_end;
+  m_crtc_state.in_hblank = new_hblank;
+  if (m_timers->IsUsingExternalClock(HBLANK_TIMER_INDEX))
+  {
+    const u32 hblank_timer_ticks = BoolToUInt32(!old_hblank) + BoolToUInt32(new_hblank) + (lines_to_draw - 1);
+    m_timers->AddTicks(HBLANK_TIMER_INDEX, static_cast<TickCount>(hblank_timer_ticks));
+  }
+
+  while (lines_to_draw > 0)
+  {
+    const u32 lines_to_draw_this_loop =
+      std::min(lines_to_draw, m_crtc_state.vertical_total - m_crtc_state.current_scanline);
+    const u32 prev_scanline = m_crtc_state.current_scanline;
+    m_crtc_state.current_scanline += lines_to_draw_this_loop;
+    DebugAssert(m_crtc_state.current_scanline <= m_crtc_state.vertical_total);
+    lines_to_draw -= lines_to_draw_this_loop;
+
+    // clear the vblank flag if the beam would pass through the display area
+    if (prev_scanline < m_crtc_state.vertical_display_start &&
+        m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end)
+    {
+      m_crtc_state.in_vblank = false;
+    }
+
+    const bool new_vblank = m_crtc_state.current_scanline < m_crtc_state.vertical_display_start ||
+                            m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end;
+    if (m_crtc_state.in_vblank != new_vblank)
+    {
+      m_crtc_state.in_vblank = new_vblank;
+
+      if (new_vblank)
+      {
+        static u32 x = 0;
+        Log_DebugPrintf("Now in v-blank %u ticks %u hblanks", m_system->GetGlobalTickCounter() - x);
+        x = m_system->GetGlobalTickCounter();
+        m_interrupt_controller->InterruptRequest(InterruptController::IRQ::VBLANK);
+
+        // flush any pending draws and "scan out" the image
+        FlushRender();
+        UpdateDisplay();
+        m_system->IncrementFrameNumber();
+      }
+
+      m_timers->SetGate(HBLANK_TIMER_INDEX, new_vblank);
+    }
 
     // past the end of vblank?
-    if (m_crtc_state.current_scanline >= m_crtc_state.vertical_total)
+    if (m_crtc_state.current_scanline == m_crtc_state.vertical_total)
     {
       // start the new frame
       m_crtc_state.current_scanline = 0;
@@ -427,47 +516,18 @@ void GPU::Execute(TickCount ticks)
         m_GPUSTAT.interlaced_field = false;
       }
     }
-
-    const bool new_vblank = m_crtc_state.current_scanline < m_crtc_state.vertical_display_start ||
-                            m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end;
-    if (m_crtc_state.in_vblank != new_vblank)
-    {
-      m_crtc_state.in_vblank = new_vblank;
-
-      if (new_vblank)
-      {
-        Log_DebugPrintf("Now in v-blank");
-        m_interrupt_controller->InterruptRequest(InterruptController::IRQ::VBLANK);
-
-        // flush any pending draws and "scan out" the image
-        FlushRender();
-        UpdateDisplay();
-        m_system->IncrementFrameNumber();
-      }
-
-      m_timers->SetGate(HBLANK_TIMER_INDEX, new_vblank);
-    }
-
-    // alternating even line bit in 240-line mode
-    if (m_GPUSTAT.In480iMode())
-    {
-      m_GPUSTAT.drawing_even_line =
-        ConvertToBoolUnchecked((m_crtc_state.regs.Y + BoolToUInt32(!m_GPUSTAT.interlaced_field)) & u32(1));
-    }
-    else
-    {
-      m_GPUSTAT.drawing_even_line =
-        ConvertToBoolUnchecked((m_crtc_state.regs.Y + m_crtc_state.current_scanline) & u32(1));
-    }
   }
 
-  const bool new_hblank = m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_display_start ||
-                          m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_display_end;
-  if (m_crtc_state.in_hblank != new_hblank)
+  // alternating even line bit in 240-line mode
+  if (m_GPUSTAT.In480iMode())
   {
-    m_crtc_state.in_hblank = new_hblank;
-    if (new_hblank && m_timers->IsUsingExternalClock(HBLANK_TIMER_INDEX))
-      m_timers->AddTicks(HBLANK_TIMER_INDEX, 1);
+    m_GPUSTAT.drawing_even_line =
+      ConvertToBoolUnchecked((m_crtc_state.regs.Y + BoolToUInt32(!m_GPUSTAT.interlaced_field)) & u32(1));
+  }
+  else
+  {
+    m_GPUSTAT.drawing_even_line =
+      ConvertToBoolUnchecked((m_crtc_state.regs.Y + m_crtc_state.current_scanline) & u32(1));
   }
 
   UpdateSliceTicks();
@@ -572,17 +632,29 @@ void GPU::WriteGP1(u32 value)
 
     case 0x06: // Set horizontal display range
     {
-      m_crtc_state.regs.horizontal_display_range = param & CRTCState::Regs::HORIZONTAL_DISPLAY_RANGE_MASK;
-      Log_DebugPrintf("Horizontal display range <- 0x%08X", m_crtc_state.regs.horizontal_display_range);
-      UpdateCRTCConfig();
+      const u32 new_value = param & CRTCState::Regs::HORIZONTAL_DISPLAY_RANGE_MASK;
+      Log_DebugPrintf("Horizontal display range <- 0x%08X", new_value);
+
+      if (m_crtc_state.regs.horizontal_display_range != new_value)
+      {
+        m_tick_event->InvokeEarly(true);
+        m_crtc_state.regs.horizontal_display_range = new_value;
+        UpdateCRTCConfig();
+      }
     }
     break;
 
     case 0x07: // Set display start address
     {
-      m_crtc_state.regs.vertical_display_range = param & CRTCState::Regs::VERTICAL_DISPLAY_RANGE_MASK;
-      Log_DebugPrintf("Vertical display range <- 0x%08X", m_crtc_state.regs.vertical_display_range);
-      UpdateCRTCConfig();
+      const u32 new_value = param & CRTCState::Regs::VERTICAL_DISPLAY_RANGE_MASK;
+      Log_DebugPrintf("Vertical display range <- 0x%08X", new_value);
+
+      if (m_crtc_state.regs.vertical_display_range != new_value)
+      {
+        m_tick_event->InvokeEarly(true);
+        m_crtc_state.regs.vertical_display_range = new_value;
+        UpdateCRTCConfig();
+      }
     }
     break;
 
@@ -602,16 +674,22 @@ void GPU::WriteGP1(u32 value)
       };
 
       const GP1_08h dm{param};
-      m_GPUSTAT.horizontal_resolution_1 = dm.horizontal_resolution_1;
-      m_GPUSTAT.vertical_resolution = dm.vertical_resolution;
-      m_GPUSTAT.pal_mode = dm.pal_mode;
-      m_GPUSTAT.display_area_color_depth_24 = dm.display_area_color_depth;
-      m_GPUSTAT.vertical_interlace = dm.vertical_interlace;
-      m_GPUSTAT.horizontal_resolution_2 = dm.horizontal_resolution_2;
-      m_GPUSTAT.reverse_flag = dm.reverse_flag;
-
+      GPUSTAT new_GPUSTAT{m_GPUSTAT.bits};
+      new_GPUSTAT.horizontal_resolution_1 = dm.horizontal_resolution_1;
+      new_GPUSTAT.vertical_resolution = dm.vertical_resolution;
+      new_GPUSTAT.pal_mode = dm.pal_mode;
+      new_GPUSTAT.display_area_color_depth_24 = dm.display_area_color_depth;
+      new_GPUSTAT.vertical_interlace = dm.vertical_interlace;
+      new_GPUSTAT.horizontal_resolution_2 = dm.horizontal_resolution_2;
+      new_GPUSTAT.reverse_flag = dm.reverse_flag;
       Log_DebugPrintf("Set display mode <- 0x%08X", dm.bits);
-      UpdateCRTCConfig();
+
+      if (m_GPUSTAT.bits != new_GPUSTAT.bits)
+      {
+        m_tick_event->InvokeEarly(true);
+        m_GPUSTAT.bits = new_GPUSTAT.bits;
+        UpdateCRTCConfig();
+      }
     }
     break;
 

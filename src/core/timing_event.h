@@ -27,7 +27,7 @@ public:
   TickCount GetPeriod() const { return m_period; }
   TickCount GetInterval() const { return m_interval; }
 
-  TickCount GetDownCount() const { return m_downcount; }
+  TickCount GetDowncount() const { return m_downcount; }
 
   // Includes pending time.
   TickCount GetTicksSinceLastExecution() const;

@@ -1,5 +1,6 @@
 #include "timing_event.h"
 #include "common/assert.h"
+#include "cpu_core.h"
 #include "system.h"
 
 TimingEvent::TimingEvent(System* system, std::string name, TickCount period, TickCount interval,
@@ -17,12 +18,12 @@ TimingEvent::~TimingEvent()
 
 TickCount TimingEvent::GetTicksSinceLastExecution() const
 {
-  return m_system->GetPendingTicks() + m_time_since_last_run;
+  return m_system->m_cpu->GetPendingTicks() + m_time_since_last_run;
 }
 
 TickCount TimingEvent::GetTicksUntilNextExecution() const
 {
-  return std::max(m_downcount - m_system->GetPendingTicks(), static_cast<TickCount>(0));
+  return std::max(m_downcount - m_system->m_cpu->GetPendingTicks(), static_cast<TickCount>(0));
 }
 
 void TimingEvent::Schedule(TickCount ticks)
@@ -33,7 +34,7 @@ void TimingEvent::Schedule(TickCount ticks)
   // Factor in partial time if this was rescheduled outside of an event handler. Say, an MMIO write.
   if (!m_system->m_running_events)
   {
-    const TickCount pending_ticks = m_system->GetPendingTicks();
+    const TickCount pending_ticks = m_system->m_cpu->GetPendingTicks();
     m_downcount += pending_ticks;
     m_time_since_last_run -= pending_ticks;
   }
@@ -71,7 +72,7 @@ void TimingEvent::InvokeEarly(bool force /* = false */)
   if (!m_active)
     return;
 
-  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->GetPendingTicks();
+  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->m_cpu->GetPendingTicks();
   const TickCount ticks_to_execute = m_time_since_last_run + pending_ticks;
   if (!force && ticks_to_execute < m_period)
     return;
@@ -90,7 +91,7 @@ void TimingEvent::Activate()
     return;
 
   // leave the downcount intact
-  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->GetPendingTicks();
+  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->m_cpu->GetPendingTicks();
   m_downcount += pending_ticks;
   m_time_since_last_run -= pending_ticks;
 
@@ -103,7 +104,7 @@ void TimingEvent::Deactivate()
   if (!m_active)
     return;
 
-  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->GetPendingTicks();
+  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->m_cpu->GetPendingTicks();
   m_downcount -= pending_ticks;
   m_time_since_last_run += pending_ticks;
 
@@ -113,7 +114,7 @@ void TimingEvent::Deactivate()
 
 void TimingEvent::SetDowncount(TickCount downcount)
 {
-  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->GetPendingTicks();
+  const TickCount pending_ticks = m_system->m_running_events ? 0 : m_system->m_cpu->GetPendingTicks();
   m_downcount = downcount + pending_ticks;
   m_time_since_last_run = -pending_ticks;
 

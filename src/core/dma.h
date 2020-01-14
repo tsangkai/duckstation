@@ -70,6 +70,7 @@ private:
   TickCount GetTransferDelay(Channel channel) const;
 
   // is everything enabled for a channel to operate?
+  bool HasAnyPendingTransfers() const;
   bool CanTransferChannel(Channel channel) const;
   bool CanRunAnyChannels() const;
   void UpdateIRQ();
@@ -210,7 +211,4 @@ private:
       master_flag = master_enable && ((((bits >> 16) & u32(0b1111111)) & ((bits >> 24) & u32(0b1111111))) != 0);
     }
   } m_DICR = {};
-
-  TickCount m_transfer_min_ticks = 0;
-  bool m_transfer_in_progress = false;
 };

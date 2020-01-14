@@ -54,7 +54,11 @@ public:
   u32 GetFrameNumber() const { return m_frame_number; }
   u32 GetInternalFrameNumber() const { return m_internal_frame_number; }
   u32 GetGlobalTickCounter() const { return m_global_tick_counter; }
-  void IncrementFrameNumber() { m_frame_number++; }
+  void IncrementFrameNumber()
+  {
+    m_frame_number++;
+    m_frame_done = true;
+  }
   void IncrementInternalFrameNumber() { m_internal_frame_number++; }
 
   const Settings& GetSettings() { return m_host_interface->GetSettings(); }
@@ -73,14 +77,8 @@ public:
   bool LoadEXE(const char* filename, std::vector<u8>& bios_image);
   bool SetExpansionROM(const char* filename);
 
-  void SetDowncount(TickCount downcount);
-  void Synchronize();
-
   // Adds ticks to the global tick counter, simulating the CPU being stalled.
   void StallCPU(TickCount ticks);
-
-  /// Returns pending time from the CPU (which we haven't executed yet)
-  TickCount GetPendingTicks() const;
 
   // Access controllers for simulating input.
   Controller* GetController(u32 slot) const;
@@ -96,6 +94,8 @@ public:
   std::unique_ptr<TimingEvent> CreateTimingEvent(const char* name, TickCount period, TickCount interval,
                                                  TimingEventCallback callback, bool activate);
 
+  bool RUNNING_EVENTS() const { return m_running_events; }
+
 private:
   System(HostInterface* host_interface);
 
@@ -103,6 +103,7 @@ private:
   bool CreateGPU();
 
   void InitializeComponents();
+  void DestroyComponents();
 
   // Active event management
   void AddActiveEvent(TimingEvent* event);
@@ -153,4 +154,5 @@ private:
   u32 m_last_event_run_time = 0;
   bool m_running_events = false;
   bool m_events_need_sorting = false;
+  bool m_frame_done = false;
 };

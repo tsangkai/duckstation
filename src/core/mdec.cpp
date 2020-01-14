@@ -411,7 +411,6 @@ void MDEC::ScheduleBlockCopyOut(TickCount ticks)
   Log_DebugPrintf("Scheduling block copy out in %d ticks", ticks);
 
   m_block_copy_out_event->Schedule(TICKS_PER_BLOCK);
-  m_system->SetDowncount(ticks);
 }
 
 void MDEC::CopyOutBlock()

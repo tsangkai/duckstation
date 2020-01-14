@@ -351,7 +351,7 @@ void HostInterface::Throttle()
   const s64 sleep_time = static_cast<s64>(m_last_throttle_time - time);
   if (std::abs(sleep_time) >= MAX_VARIANCE_TIME)
   {
-#ifdef Y_BUILD_CONFIG_RELEASE
+#ifndef _DEBUG
     // Don't display the slow messages in debug, it'll always be slow...
     // Limit how often the messages are displayed.
     if (m_speed_lost_time_timestamp.GetTimeSeconds() >= 1.0f)
@@ -411,7 +411,7 @@ bool HostInterface::SaveState(const char* filename)
   }
   else
   {
-    ReportFormattedError("State saved to %s.", filename);
+    AddFormattedOSDMessage(2.0f, "State saved to %s.", filename);
     stream->Commit();
   }
 

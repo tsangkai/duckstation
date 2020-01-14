@@ -54,6 +54,9 @@ public:
   bool LoadState(const char* filename);
   bool SaveState(const char* filename);
 
+  /// Throttles the system, i.e. sleeps until it's time to execute the next frame.
+  void Throttle();
+
 protected:
   using ThrottleClock = std::chrono::steady_clock;
 
@@ -71,9 +74,6 @@ protected:
     Common::Timer time;
     float duration;
   };
-
-  /// Throttles the system, i.e. sleeps until it's time to execute the next frame.
-  void Throttle();
 
   void UpdateSpeedLimiterState();
 

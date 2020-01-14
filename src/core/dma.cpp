@@ -1,7 +1,7 @@
 #include "dma.h"
-#include "common/log.h"
 #include "bus.h"
 #include "cdrom.h"
+#include "common/log.h"
 #include "common/state_wrapper.h"
 #include "gpu.h"
 #include "interrupt_controller.h"
@@ -25,11 +25,12 @@ void DMA::Initialize(System* system, Bus* bus, InterruptController* interrupt_co
   m_spu = spu;
   m_mdec = mdec;
   m_transfer_buffer.resize(32);
+  m_transfer_event =
+    system->CreateTimingEvent("DMA Transfer", 1, 1, std::bind(&DMA::Execute, this, std::placeholders::_1), false);
 }
 
 void DMA::Reset()
 {
-  m_transfer_in_progress = false;
   std::memset(&m_state, 0, sizeof(m_state));
   m_DPCR.bits = 0x07654321;
   m_DICR.bits = 0;
@@ -51,15 +52,7 @@ bool DMA::DoState(StateWrapper& sw)
   sw.Do(&m_DICR.bits);
 
   if (sw.IsReading())
-  {
-    m_transfer_min_ticks = std::numeric_limits<TickCount>::max();
-    for (const ChannelState& cs : m_state)
-    {
-      if (cs.transfer_ticks > 0)
-        m_transfer_min_ticks = std::min(m_transfer_min_ticks, cs.transfer_ticks);
-    }
-    m_system->SetDowncount(m_transfer_min_ticks);
-  }
+    m_transfer_event->SetState(HasAnyPendingTransfers());
 
   return !sw.HasError();
 }
@@ -202,6 +195,17 @@ TickCount DMA::GetTransferDelay(Channel channel) const
   }
 }
 
+bool DMA::HasAnyPendingTransfers() const
+{
+  for (u32 i = 0; i < NUM_CHANNELS; i++)
+  {
+    if (m_state[i].transfer_ticks > 0)
+      return true;
+  }
+
+  return false;
+}
+
 bool DMA::CanTransferChannel(Channel channel) const
 {
   if (!m_DPCR.GetMasterEnable(channel))
@@ -258,12 +262,9 @@ void DMA::QueueTransferChannel(Channel channel)
     return;
   }
 
-  if (!m_transfer_in_progress)
-    m_system->Synchronize();
-
   cs.transfer_ticks = ticks;
-  m_transfer_min_ticks = std::min(m_transfer_min_ticks, ticks);
-  m_system->SetDowncount(ticks);
+  if (!m_transfer_event->IsActive() || ticks < m_transfer_event->GetTicksUntilNextExecution())
+    m_transfer_event->Schedule(ticks);
 }
 
 void DMA::QueueTransfer()
@@ -274,18 +275,8 @@ void DMA::QueueTransfer()
 
 void DMA::Execute(TickCount ticks)
 {
-  m_transfer_min_ticks -= ticks;
-  if (m_transfer_min_ticks > 0)
-  {
-    m_system->SetDowncount(m_transfer_min_ticks);
-    return;
-  }
-
-  DebugAssert(!m_transfer_in_progress);
-  m_transfer_in_progress = true;
-
   // keep going until all transfers are done. one channel can start others (e.g. MDEC)
-  m_transfer_min_ticks = std::numeric_limits<TickCount>::max();
+  TickCount new_min_ticks = std::numeric_limits<TickCount>::max();
   for (u32 i = 0; i < NUM_CHANNELS; i++)
   {
     const Channel channel = static_cast<Channel>(i);
@@ -294,17 +285,15 @@ void DMA::Execute(TickCount ticks)
 
     m_state[i].transfer_ticks -= ticks;
     if (CanTransferChannel(channel))
-    {
       TransferChannel(channel);
-    }
     else
-    {
-      m_transfer_min_ticks = std::min(m_transfer_min_ticks, ticks);
-    }
+      new_min_ticks = std::min(new_min_ticks, m_state[i].transfer_ticks);
   }
 
-  m_system->SetDowncount(m_transfer_min_ticks);
-  m_transfer_in_progress = false;
+  if (new_min_ticks != std::numeric_limits<TickCount>::max())
+    m_transfer_event->Schedule(new_min_ticks);
+  else
+    m_transfer_event->Deactivate();
 }
 
 void DMA::TransferChannel(Channel channel)

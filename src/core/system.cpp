@@ -40,7 +40,11 @@ System::System(HostInterface* host_interface) : m_host_interface(host_interface)
   m_cpu_execution_mode = host_interface->GetSettings().cpu_execution_mode;
 }
 
-System::~System() = default;
+System::~System()
+{
+  // we have to explicitly destroy components because they can deregister events
+  DestroyComponents();
+}
 
 std::unique_ptr<System> System::Create(HostInterface* host_interface)
 {
@@ -180,9 +184,24 @@ void System::InitializeComponents()
 
   m_cdrom->Initialize(this, m_dma.get(), m_interrupt_controller.get(), m_spu.get());
   m_pad->Initialize(this, m_interrupt_controller.get());
-  m_timers->Initialize(this, m_interrupt_controller.get());
+  m_timers->Initialize(this, m_interrupt_controller.get(), m_gpu.get());
   m_spu->Initialize(this, m_dma.get(), m_interrupt_controller.get());
   m_mdec->Initialize(this, m_dma.get());
+}
+
+void System::DestroyComponents()
+{
+  m_mdec.reset();
+  m_spu.reset();
+  m_timers.reset();
+  m_pad.reset();
+  m_cdrom.reset();
+  m_gpu.reset();
+  m_interrupt_controller.reset();
+  m_dma.reset();
+  m_bus.reset();
+  m_cpu_code_cache.reset();
+  m_cpu.reset();
 }
 
 bool System::CreateGPU()
@@ -271,6 +290,9 @@ bool System::DoState(StateWrapper& sw)
   if (!sw.DoMarker("SIO") || !m_sio->DoState(sw))
     return false;
 
+  if (!sw.DoMarker("Events") || !DoEventsState(sw))
+    return false;
+
   return !sw.HasError();
 }
 
@@ -308,22 +330,24 @@ bool System::SaveState(ByteStream* state)
 void System::RunFrame()
 {
   // Duplicated to avoid branch in the while loop, as the downcount can be quite low at times.
-  u32 current_frame_number = m_frame_number;
+  m_frame_done = false;
   if (m_cpu_execution_mode == CPUExecutionMode::Interpreter)
   {
-    while (current_frame_number == m_frame_number)
+    do
     {
+      UpdateCPUDowncount();
       m_cpu->Execute();
-      Synchronize();
-    }
+      RunEvents();
+    } while (!m_frame_done);
   }
   else
   {
-    while (current_frame_number == m_frame_number)
+    do
     {
+      UpdateCPUDowncount();
       m_cpu_code_cache->Execute();
-      Synchronize();
-    }
+      RunEvents();
+    } while (!m_frame_done);
   }
 }
 
@@ -411,37 +435,11 @@ bool System::SetExpansionROM(const char* filename)
   return true;
 }
 
-void System::Synchronize()
-{
-  const TickCount pending_ticks = m_cpu->GetPendingTicks();
-  if (pending_ticks == 0)
-    return;
-
-  m_cpu->ResetPendingTicks();
-  m_cpu->ResetDowncount();
-
-  m_global_tick_counter += static_cast<u32>(pending_ticks);
-  RunEvents();
-
-  m_timers->Execute(pending_ticks);
-  m_dma->Execute(pending_ticks);
-}
-
-void System::SetDowncount(TickCount downcount)
-{
-  m_cpu->SetDowncount(downcount);
-}
-
 void System::StallCPU(TickCount ticks)
 {
   m_cpu->AddPendingTicks(ticks);
   if (m_cpu->GetPendingTicks() >= m_cpu->GetDowncount() && !m_running_events)
-    Synchronize();
-}
-
-TickCount System::GetPendingTicks() const
-{
-  return m_cpu->GetPendingTicks();
+    RunEvents();
 }
 
 Controller* System::GetController(u32 slot) const
@@ -517,7 +515,7 @@ std::unique_ptr<TimingEvent> System::CreateTimingEvent(const char* name, TickCou
 
 static bool CompareEvents(const TimingEvent* lhs, const TimingEvent* rhs)
 {
-  return lhs->GetDownCount() > rhs->GetDownCount();
+  return lhs->GetDowncount() > rhs->GetDowncount();
 }
 
 void System::AddActiveEvent(TimingEvent* event)
@@ -526,7 +524,8 @@ void System::AddActiveEvent(TimingEvent* event)
   if (!m_running_events)
   {
     std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
-    UpdateCPUDowncount();
+    if (!m_frame_done)
+      m_cpu->SetDowncount(m_events[0]->GetDowncount() - m_cpu->GetPendingTicks());
   }
   else
   {
@@ -547,7 +546,8 @@ void System::RemoveActiveEvent(TimingEvent* event)
   if (!m_running_events)
   {
     std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
-    UpdateCPUDowncount();
+    if (!m_events.empty() && !m_frame_done)
+      UpdateCPUDowncount();
   }
   else
   {
@@ -560,7 +560,8 @@ void System::SortEvents()
   if (!m_running_events)
   {
     std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
-    UpdateCPUDowncount();
+    if (!m_frame_done)
+      UpdateCPUDowncount();
   }
   else
   {
@@ -570,19 +571,18 @@ void System::SortEvents()
 
 void System::RunEvents()
 {
-  DebugAssert(!m_running_events);
-  if (m_events.empty())
-  {
-    // on the off chance that we don't have any events...
-    m_last_event_run_time = m_global_tick_counter;
-    return;
-  }
+  DebugAssert(!m_running_events && !m_events.empty());
+
+  const TickCount pending_ticks = m_cpu->GetPendingTicks();
+  m_global_tick_counter += static_cast<u32>(pending_ticks);
+  m_cpu->ResetPendingTicks();
+  m_cpu->ResetDowncount();
 
   TickCount remaining_time = static_cast<TickCount>(m_global_tick_counter - m_last_event_run_time);
-  if (remaining_time < m_events.front()->GetDownCount())
+  if (remaining_time < m_events.front()->GetDowncount())
   {
     // no need to run events yet.
-    m_cpu->SetDowncount(m_events.front()->GetDownCount() - remaining_time);
+    m_cpu->SetDowncount(m_events.front()->GetDowncount() - remaining_time);
     return;
   }
 
@@ -592,7 +592,7 @@ void System::RunEvents()
   {
     // To avoid issues where two events are related to each other from becoming desynced,
     // we run at a slice that is the length of the lowest next event time.
-    TickCount time = std::min(remaining_time, m_events.front()->GetDownCount());
+    TickCount time = std::min(remaining_time, m_events.front()->GetDowncount());
     remaining_time -= time;
     m_last_event_run_time += time;
 
@@ -605,7 +605,7 @@ void System::RunEvents()
     }
 
     // Now we can actually run the callbacks.
-    while (!m_events.empty() && m_events.front()->GetDownCount() <= 0)
+    while (!m_events.empty() && m_events.front()->GetDowncount() <= 0)
     {
       TimingEvent* evt = m_events.front();
       TickCount ticks_late = -evt->m_downcount;
@@ -643,15 +643,12 @@ void System::RunEvents()
 
   DebugAssert(m_last_event_run_time == m_global_tick_counter);
   m_running_events = false;
-  UpdateCPUDowncount();
+  m_cpu->SetDowncount(m_events.front()->GetDowncount());
 }
 
 void System::UpdateCPUDowncount()
 {
-  if (!m_events.empty())
-    m_cpu->SetDowncount(m_events.front()->GetDownCount());
-  else
-    m_cpu->SetDowncount(std::numeric_limits<TickCount>::max());
+  m_cpu->SetDowncount(m_events[0]->GetDowncount() - m_cpu->GetPendingTicks());
 }
 
 bool System::DoEventsState(StateWrapper& sw)
@@ -689,6 +686,8 @@ bool System::DoEventsState(StateWrapper& sw)
       event->m_interval = interval;
     }
 
+    sw.Do(&m_last_event_run_time);
+
     Log_DevPrintf("Loaded %u events from save state.", event_count);
     SortEvents();
   }
@@ -706,6 +705,8 @@ bool System::DoEventsState(StateWrapper& sw)
       sw.Do(&evt->m_interval);
     }
 
+    sw.Do(&m_last_event_run_time);
+
     Log_DevPrintf("Wrote %u events to save state.", event_count);
   }
 
@@ -714,7 +715,8 @@ bool System::DoEventsState(StateWrapper& sw)
 
 TimingEvent* System::FindActiveEvent(const char* name)
 {
-  auto iter = std::find_if(m_events.begin(), m_events.end(), [&name](auto& ev) { return ev->GetName().compare(name); });
+  auto iter =
+    std::find_if(m_events.begin(), m_events.end(), [&name](auto& ev) { return ev->GetName().compare(name) == 0; });
 
   return (iter != m_events.end()) ? *iter : nullptr;
 }
