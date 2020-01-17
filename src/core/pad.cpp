@@ -114,8 +114,6 @@ u32 Pad::ReadRegister(u32 offset)
   {
     case 0x00: // JOY_DATA
     {
-      m_transfer_event->InvokeEarly();
-
       const u8 value = m_receive_buffer_full ? m_receive_buffer : 0xFF;
       Log_DebugPrintf("JOY_DATA (R) -> 0x%02X%s", ZeroExtend32(value), m_receive_buffer_full ? "" : "(EMPTY)");
       m_receive_buffer_full = false;
@@ -128,7 +126,6 @@ u32 Pad::ReadRegister(u32 offset)
     case 0x04: // JOY_STAT
     {
       const u32 bits = m_JOY_STAT.bits;
-      m_transfer_event->InvokeEarly();
       m_JOY_STAT.ACKINPUT = false;
       return bits;
     }
@@ -245,7 +242,6 @@ void Pad::UpdateJoyStat()
 
 void Pad::TransferEvent(TickCount ticks_late)
 {
-  m_transfer_event->Deactivate();
   if (m_state == State::Transmitting)
     DoTransfer(ticks_late);
   else
@@ -277,7 +273,7 @@ void Pad::BeginTransfer()
   // until after (4) and (5) have been completed.
 
   m_state = State::Transmitting;
-  m_transfer_event->Schedule(GetTransferTicks());
+  m_transfer_event->SetPeriodAndSchedule(GetTransferTicks());
 }
 
 void Pad::DoTransfer(TickCount ticks_late)
@@ -360,7 +356,7 @@ void Pad::DoTransfer(TickCount ticks_late)
     if (ticks_late >= ack_timer)
       DoACK();
     else
-      m_transfer_event->Schedule(ack_timer - ticks_late);
+      m_transfer_event->SetPeriodAndSchedule(ack_timer - ticks_late);
   }
 
   UpdateJoyStat();

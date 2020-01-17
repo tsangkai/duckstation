@@ -313,6 +313,7 @@ void System::Reset()
   m_frame_number = 1;
   m_internal_frame_number = 0;
   m_global_tick_counter = 0;
+  m_last_event_run_time = 0;
 }
 
 bool System::LoadState(ByteStream* state)
@@ -503,10 +504,11 @@ void System::RemoveMedia()
   m_cdrom->RemoveMedia();
 }
 
-std::unique_ptr<TimingEvent> System::CreateTimingEvent(const char* name, TickCount period, TickCount interval,
+std::unique_ptr<TimingEvent> System::CreateTimingEvent(std::string name, TickCount period, TickCount interval,
                                                        TimingEventCallback callback, bool activate)
 {
-  std::unique_ptr<TimingEvent> event = std::make_unique<TimingEvent>(this, name, period, interval, std::move(callback));
+  std::unique_ptr<TimingEvent> event =
+    std::make_unique<TimingEvent>(this, std::move(name), period, interval, std::move(callback));
   if (activate)
     event->Activate();
 
@@ -525,7 +527,7 @@ void System::AddActiveEvent(TimingEvent* event)
   {
     std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
     if (!m_frame_done)
-      m_cpu->SetDowncount(m_events[0]->GetDowncount() - m_cpu->GetPendingTicks());
+      UpdateCPUDowncount();
   }
   else
   {
@@ -576,79 +578,56 @@ void System::RunEvents()
   const TickCount pending_ticks = m_cpu->GetPendingTicks();
   m_global_tick_counter += static_cast<u32>(pending_ticks);
   m_cpu->ResetPendingTicks();
-  m_cpu->ResetDowncount();
 
-  TickCount remaining_time = static_cast<TickCount>(m_global_tick_counter - m_last_event_run_time);
-  if (remaining_time < m_events.front()->GetDowncount())
-  {
-    // no need to run events yet.
-    m_cpu->SetDowncount(m_events.front()->GetDowncount() - remaining_time);
-    return;
-  }
-
+  TickCount time = static_cast<TickCount>(m_global_tick_counter - m_last_event_run_time);
   m_running_events = true;
+  m_last_event_run_time = m_global_tick_counter;
 
-  while (remaining_time > 0)
+  // Apply downcount to all events.
+  // This will result in a negative downcount for those events which are late.
+  for (TimingEvent* evt : m_events)
   {
-    // To avoid issues where two events are related to each other from becoming desynced,
-    // we run at a slice that is the length of the lowest next event time.
-    TickCount time = std::min(remaining_time, m_events.front()->GetDowncount());
-    remaining_time -= time;
-    m_last_event_run_time += time;
+    evt->m_downcount -= time;
+    evt->m_time_since_last_run += time;
+  }
 
-    // Apply downcount to all events.
-    // This will result in a negative downcount for those events which are late.
-    for (TimingEvent* evt : m_events)
+  // Now we can actually run the callbacks.
+  while (m_events.front()->GetDowncount() <= 0)
+  {
+    TimingEvent* evt = m_events.front();
+    const TickCount ticks_late = -evt->m_downcount;
+    std::pop_heap(m_events.begin(), m_events.end(), CompareEvents);
+
+    // Factor late time into the time for the next invocation.
+    const TickCount ticks_to_execute = evt->m_time_since_last_run;
+    evt->m_downcount += evt->m_interval;
+    evt->m_time_since_last_run = 0;
+
+    // The cycles_late is only an indicator, it doesn't modify the cycles to execute.
+    evt->m_callback(ticks_to_execute, ticks_late);
+
+    // Place it in the appropriate position in the queue.
+    if (m_events_need_sorting)
     {
-      evt->m_downcount = evt->m_downcount - time;
-      evt->m_time_since_last_run += time;
+      // Another event may have been changed by this event, or the interval/downcount changed.
+      std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
+      m_events_need_sorting = false;
     }
-
-    // Now we can actually run the callbacks.
-    while (!m_events.empty() && m_events.front()->GetDowncount() <= 0)
+    else
     {
-      TimingEvent* evt = m_events.front();
-      TickCount ticks_late = -evt->m_downcount;
-      std::pop_heap(m_events.begin(), m_events.end(), CompareEvents);
-
-      // Don't include overrun cycles in the execution.
-      // If the late time is greater than (period * interval), we'll re-place us at the front (or near)
-      // the front of the queue again, and submit the next iteration then. This should reduce issues where
-      // multiple events are dependent on one another, that may be caused if all cycles were executed at once.
-      TickCount ticks_to_execute = (evt->m_time_since_last_run - ticks_late);
-      DebugAssert(ticks_to_execute >= 0);
-
-      // Factor late time into the time for the next invocation.
-      evt->m_downcount += evt->m_interval;
-      evt->m_time_since_last_run -= ticks_to_execute;
-
-      // The cycles_late is only an indicator, it doesn't modify the cycles to execute.
-      evt->m_callback(ticks_to_execute, ticks_late);
-
-      // Place it in the appropriate position in the queue.
-      if (m_events_need_sorting)
-      {
-        // Another event may have been changed by this event, or the interval/downcount changed.
-        std::make_heap(m_events.begin(), m_events.end(), CompareEvents);
-        m_events_need_sorting = false;
-      }
-      else
-      {
-        // Keep the event list in a heap. The event we just serviced will be in the last place,
-        // so we can use push_here instead of make_heap, which should be faster.
-        std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
-      }
+      // Keep the event list in a heap. The event we just serviced will be in the last place,
+      // so we can use push_here instead of make_heap, which should be faster.
+      std::push_heap(m_events.begin(), m_events.end(), CompareEvents);
     }
   }
 
-  DebugAssert(m_last_event_run_time == m_global_tick_counter);
   m_running_events = false;
   m_cpu->SetDowncount(m_events.front()->GetDowncount());
 }
 
 void System::UpdateCPUDowncount()
 {
-  m_cpu->SetDowncount(m_events[0]->GetDowncount() - m_cpu->GetPendingTicks());
+  m_cpu->SetDowncount(m_events[0]->GetDowncount());
 }
 
 bool System::DoEventsState(StateWrapper& sw)

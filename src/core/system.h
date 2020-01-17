@@ -91,7 +91,7 @@ public:
   void RemoveMedia();
 
   /// Creates a new event.
-  std::unique_ptr<TimingEvent> CreateTimingEvent(const char* name, TickCount period, TickCount interval,
+  std::unique_ptr<TimingEvent> CreateTimingEvent(std::string name, TickCount period, TickCount interval,
                                                  TimingEventCallback callback, bool activate);
 
   bool RUNNING_EVENTS() const { return m_running_events; }

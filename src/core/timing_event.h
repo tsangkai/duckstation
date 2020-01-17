@@ -35,6 +35,7 @@ public:
 
   void Schedule(TickCount ticks);
   void SetIntervalAndSchedule(TickCount ticks);
+  void SetPeriodAndSchedule(TickCount ticks);
 
   void Reset();
 

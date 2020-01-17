@@ -377,7 +377,7 @@ void SPU::WriteRegister(u32 offset, u16 value)
     case 0x1F801DAA - SPU_BASE:
     {
       Log_DebugPrintf("SPU control register <- 0x%04X", ZeroExtend32(value));
-      m_sample_event->InvokeEarly();
+      m_sample_event->InvokeEarly(true);
 
       m_SPUCNT.bits = value;
       m_SPUSTAT.mode = m_SPUCNT.mode.GetValue();
@@ -624,8 +624,6 @@ void SPU::IncrementCaptureBufferPosition()
 void SPU::Execute(TickCount ticks)
 {
   DebugAssert(m_SPUCNT.enable || m_SPUCNT.cd_audio_enable);
-  if (ticks < SYSCLK_TICKS_PER_SPU_TICK)
-    return;
 
   u32 remaining_frames = static_cast<u32>((ticks + m_ticks_carry) / SYSCLK_TICKS_PER_SPU_TICK);
   m_ticks_carry = (ticks + m_ticks_carry) % SYSCLK_TICKS_PER_SPU_TICK;
@@ -644,9 +642,9 @@ void SPU::Execute(TickCount ticks)
       s32 right_sum = 0;
       if (m_SPUCNT.enable)
       {
-        for (u32 i = 0; i < NUM_VOICES; i++)
+        for (u32 voice = 0; voice < NUM_VOICES; voice++)
         {
-          const auto [left, right] = SampleVoice(i);
+          const auto [left, right] = SampleVoice(voice);
           left_sum += left;
           right_sum += right;
         }
@@ -702,11 +700,19 @@ void SPU::UpdateEventInterval()
     return;
   }
 
-  // Generate samples every 100ms unless interrupts are enabled, which means we have to generate them in realtime.
+  // Don't generate more than the audio buffer since in a single slice, otherwise we'll both overflow the buffers when
+  // we do write it, and the audio thread will underflow since it won't have enough data it the game isn't messing with
+  // the SPU state.
+  const u32 max_slice_frames = m_system->GetHostInterface()->GetAudioStream()->GetBufferSize();
+
   // TODO: Make this predict how long until the interrupt will be hit instead...
-  const u32 interval = m_SPUCNT.irq9_enable ? 1 : (MAX_SLICE_SIZE / SYSCLK_TICKS_PER_SPU_TICK);
+  const u32 interval = m_SPUCNT.irq9_enable ? 1 : max_slice_frames;
   const TickCount interval_ticks = static_cast<TickCount>(interval) * SYSCLK_TICKS_PER_SPU_TICK;
-  DebugAssert(m_ticks_carry < interval_ticks);
+  if (m_sample_event->IsActive() && m_sample_event->GetInterval() == interval_ticks)
+    return;
+
+  // Ensure all pending ticks have been executed, since we won't get them back after rescheduling.
+  m_sample_event->InvokeEarly(true);
   m_sample_event->SetInterval(interval_ticks);
   m_sample_event->Schedule(interval_ticks - m_ticks_carry);
 }

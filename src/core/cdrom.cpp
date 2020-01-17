@@ -24,7 +24,8 @@ void CDROM::Initialize(System* system, DMA* dma, InterruptController* interrupt_
   m_spu = spu;
   m_command_event =
     m_system->CreateTimingEvent("CDROM Command Event", 1, 1, std::bind(&CDROM::ExecuteCommand, this), false);
-  m_drive_event = m_system->CreateTimingEvent("CDROM Drive Event", 1, 1, std::bind(&CDROM::ExecuteDrive, this), false);
+  m_drive_event = m_system->CreateTimingEvent("CDROM Drive Event", 1, 1,
+                                              std::bind(&CDROM::ExecuteDrive, this, std::placeholders::_2), false);
 }
 
 void CDROM::Reset()
@@ -961,7 +962,7 @@ void CDROM::UpdateCommandEvent()
   }
 }
 
-void CDROM::ExecuteDrive()
+void CDROM::ExecuteDrive(TickCount ticks_late)
 {
   switch (m_drive_state)
   {
@@ -971,7 +972,7 @@ void CDROM::ExecuteDrive()
 
     case DriveState::SeekingPhysical:
     case DriveState::SeekingLogical:
-      DoSeekComplete();
+      DoSeekComplete(ticks_late);
       break;
 
     case DriveState::Pausing:
@@ -1001,7 +1002,7 @@ void CDROM::ExecuteDrive()
   }
 }
 
-void CDROM::BeginReading()
+void CDROM::BeginReading(TickCount ticks_late)
 {
   Log_DebugPrintf("Starting reading");
   if (m_setloc_pending)
@@ -1016,11 +1017,13 @@ void CDROM::BeginReading()
   // TODO: Should the sector buffer be cleared here?
   m_sector_buffer.clear();
 
+  const TickCount ticks = GetTicksForRead();
   m_drive_state = DriveState::Reading;
-  m_drive_event->SetIntervalAndSchedule(GetTicksForRead());
+  m_drive_event->SetInterval(ticks);
+  m_drive_event->Schedule(ticks - ticks_late);
 }
 
-void CDROM::BeginPlaying(u8 track_bcd)
+void CDROM::BeginPlaying(u8 track_bcd, TickCount ticks_late)
 {
   Log_DebugPrintf("Starting playing CDDA track %x", track_bcd);
   m_last_cdda_report_frame_nibble = 0xFF;
@@ -1052,8 +1055,10 @@ void CDROM::BeginPlaying(u8 track_bcd)
   // TODO: Should the sector buffer be cleared here?
   m_sector_buffer.clear();
 
+  const TickCount ticks = GetTicksForRead();
   m_drive_state = DriveState::Playing;
-  m_drive_event->SetIntervalAndSchedule(GetTicksForRead());
+  m_drive_event->SetInterval(ticks);
+  m_drive_event->Schedule(ticks - ticks_late);
 }
 
 void CDROM::BeginSeeking(bool logical, bool read_after_seek, bool play_after_seek)
@@ -1097,7 +1102,7 @@ void CDROM::DoSpinUpComplete()
   SetAsyncInterrupt(Interrupt::INT2);
 }
 
-void CDROM::DoSeekComplete()
+void CDROM::DoSeekComplete(TickCount ticks_late)
 {
   const bool logical = (m_drive_state == DriveState::SeekingLogical);
   m_drive_state = DriveState::Idle;
@@ -1134,11 +1139,11 @@ void CDROM::DoSeekComplete()
     // INT2 is not sent on play/read
     if (m_read_after_seek)
     {
-      BeginReading();
+      BeginReading(ticks_late);
     }
     else if (m_play_after_seek)
     {
-      BeginPlaying(m_play_track_number_bcd);
+      BeginPlaying(m_play_track_number_bcd, ticks_late);
     }
     else
     {

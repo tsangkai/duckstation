@@ -197,11 +197,11 @@ private:
   void ExecuteCommand();
   void ExecuteTestCommand(u8 subcommand);
   void UpdateCommandEvent();
-  void ExecuteDrive();
-  void BeginReading();
-  void BeginPlaying(u8 track_bcd);
+  void ExecuteDrive(TickCount ticks_late);
+  void BeginReading(TickCount ticks_late = 0);
+  void BeginPlaying(u8 track_bcd, TickCount ticks_late = 0);
   void DoSpinUpComplete();
-  void DoSeekComplete();
+  void DoSeekComplete(TickCount ticks_late);
   void DoPauseComplete();
   void DoStopComplete();
   void DoIDRead();

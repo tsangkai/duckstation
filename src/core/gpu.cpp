@@ -65,6 +65,9 @@ void GPU::SoftReset()
   m_draw_mode.SetTextureWindow(0);
   UpdateGPUSTAT();
   UpdateCRTCConfig();
+
+  m_tick_event->Deactivate();
+  UpdateSliceTicks();
 }
 
 bool GPU::DoState(StateWrapper& sw)
@@ -367,6 +370,12 @@ void GPU::UpdateCRTCConfig()
   m_tick_event->SetInterval(cs.horizontal_total);
 }
 
+static TickCount GPUTicksToSystemTicks(u32 gpu_ticks)
+{
+  // convert to master clock, rounding up as we want to overshoot not undershoot
+  return (gpu_ticks * 7 + 10) / 11;
+}
+
 void GPU::UpdateSliceTicks()
 {
   // figure out how many GPU ticks until the next vblank
@@ -374,52 +383,15 @@ void GPU::UpdateSliceTicks()
     (m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end ?
        (m_crtc_state.vertical_total - m_crtc_state.current_scanline + m_crtc_state.vertical_display_end) :
        (m_crtc_state.vertical_display_end - m_crtc_state.current_scanline));
-  const TickCount ticks_until_vblank =
+  const u32 ticks_until_vblank =
     lines_until_vblank * m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline;
-  const TickCount ticks_until_hblank =
+  const u32 ticks_until_hblank =
     (m_crtc_state.current_tick_in_scanline >= m_crtc_state.horizontal_display_end) ?
       (m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline + m_crtc_state.horizontal_display_end) :
       (m_crtc_state.horizontal_display_end - m_crtc_state.current_tick_in_scanline);
 
-#if 0
-  // the next event is at the end of the next scanline
-#if 1
-  TickCount ticks_until_next_event;
-  if (m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_display_start)
-    ticks_until_next_event = m_crtc_state.horizontal_display_start - m_crtc_state.current_tick_in_scanline;
-  else if (m_crtc_state.current_tick_in_scanline < m_crtc_state.horizontal_display_end)
-    ticks_until_next_event = m_crtc_state.horizontal_display_end - m_crtc_state.current_tick_in_scanline;
-  else
-    ticks_until_next_event = m_crtc_state.horizontal_total - m_crtc_state.current_tick_in_scanline;
-#else
-  // or at vblank. this will depend on the timer config..
-  const TickCount ticks_until_next_event =
-    ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) * m_crtc_state.horizontal_total) -
-    m_crtc_state.current_tick_in_scanline;
-#endif
-#endif
-
-  TickCount lines_until_next_event;
-  if (m_crtc_state.in_vblank)
-  {
-    if (m_crtc_state.current_scanline >= m_crtc_state.vertical_display_end)
-      lines_until_next_event =
-        ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) + m_crtc_state.vertical_display_start);
-    else
-      lines_until_next_event =
-        ((m_crtc_state.vertical_total - m_crtc_state.current_scanline) + m_crtc_state.vertical_display_start);
-  }
-  else
-  {
-    lines_until_next_event = m_crtc_state.vertical_display_end - m_crtc_state.current_scanline;
-  }
-
-  const TickCount ticks_until_next_event =
-    (lines_until_next_event * m_crtc_state.horizontal_total) - m_crtc_state.current_tick_in_scanline;
-
-  // convert to master clock, rounding up as we want to overshoot not undershoot
-  const TickCount system_ticks = (ticks_until_vblank * 7 + 10) / 11;
-  m_tick_event->Schedule(system_ticks);
+  m_tick_event->Schedule(GPUTicksToSystemTicks(ticks_until_vblank));
+  m_tick_event->SetPeriod(GPUTicksToSystemTicks(ticks_until_hblank));
 }
 
 void GPU::Execute(TickCount ticks)

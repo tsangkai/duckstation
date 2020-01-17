@@ -57,6 +57,13 @@ void TimingEvent::SetIntervalAndSchedule(TickCount ticks)
   Schedule(ticks);
 }
 
+void TimingEvent::SetPeriodAndSchedule(TickCount ticks)
+{
+  SetPeriod(ticks);
+  SetInterval(ticks);
+  Schedule(ticks);
+}
+
 void TimingEvent::Reset()
 {
   if (!m_active)
