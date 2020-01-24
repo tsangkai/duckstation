@@ -3,11 +3,12 @@
 #include "common/fifo_queue.h"
 #include "types.h"
 #include <array>
+#include <memory>
 
-class AudioStream;
 class StateWrapper;
 
 class System;
+class TimingEvent;
 class DMA;
 class InterruptController;
 
@@ -26,8 +27,6 @@ public:
 
   void DMARead(u32* words, u32 word_count);
   void DMAWrite(const u32* words, u32 word_count);
-
-  void Execute(TickCount ticks);
 
   // Render statistics debug window.
   void DrawDebugStateWindow();
@@ -282,11 +281,13 @@ private:
 
   void ReadADPCMBlock(u16 address, ADPCMBlock* block);
   std::tuple<s32, s32> SampleVoice(u32 voice_index);
-  void GenerateSample();
+  void Execute(TickCount ticks);
+  void UpdateEventInterval();
 
   System* m_system = nullptr;
   DMA* m_dma = nullptr;
   InterruptController* m_interrupt_controller = nullptr;
+  std::unique_ptr<TimingEvent> m_sample_event = nullptr;
 
   SPUCNT m_SPUCNT = {};
   SPUSTAT m_SPUSTAT = {};
