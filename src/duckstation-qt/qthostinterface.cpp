@@ -79,6 +79,9 @@ void QtHostInterface::setDefaultSettings()
   m_qsettings.setValue(QStringLiteral("Controller1/ButtonL2"), QStringLiteral("Keyboard/1"));
   m_qsettings.setValue(QStringLiteral("Controller1/ButtonR1"), QStringLiteral("Keyboard/E"));
   m_qsettings.setValue(QStringLiteral("Controller1/ButtonR2"), QStringLiteral("Keyboard/3"));
+  m_qsettings.setValue(QStringLiteral("Hotkeys/FastForward"), QStringLiteral("Keyboard/Tab"));
+  m_qsettings.setValue(QStringLiteral("Hotkeys/PowerOff"), QStringLiteral("Keyboard/Escape"));
+  m_qsettings.setValue(QStringLiteral("Hotkeys/TogglePause"), QStringLiteral("Keyboard/Pause"));
 
   updateQSettingsFromCoreSettings();
 }
@@ -411,7 +414,7 @@ std::vector<QtHostInterface::HotkeyInfo> QtHostInterface::getHotkeyList() const
   std::vector<HotkeyInfo> hotkeys = {
     {QStringLiteral("FastForward"), QStringLiteral("Toggle Fast Forward"), QStringLiteral("General")},
     {QStringLiteral("Fullscreen"), QStringLiteral("Toggle Fullscreen"), QStringLiteral("General")},
-    {QStringLiteral("Pause"), QStringLiteral("Toggle Pause"), QStringLiteral("General")},
+    {QStringLiteral("TogglePause"), QStringLiteral("Toggle Pause"), QStringLiteral("General")},
     {QStringLiteral("PowerOff"), QStringLiteral("Power Off System"), QStringLiteral("General")},
     {QStringLiteral("ToggleSoftwareRendering"), QStringLiteral("Toggle Software Rendering"),
      QStringLiteral("Graphics")},
@@ -461,7 +464,7 @@ void QtHostInterface::updateHotkeyInputMap()
       emit toggleFullscreenRequested();
   });
 
-  hk(QStringLiteral("Pause"), [this](bool pressed) {
+  hk(QStringLiteral("TogglePause"), [this](bool pressed) {
     if (!pressed)
       pauseSystem(!m_paused);
   });
