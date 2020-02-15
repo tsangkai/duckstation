@@ -1,0 +1,22 @@
+language: cpp
+
+jobs:
+  include:
+  - stage: build
+    os: linux
+    dist: bionic
+    addons:
+      apt:
+        packages:
+        - cmake
+        - ninja-build
+        - libsdl2-dev
+        - libgtk2.0-dev
+        - qtbase5-dev
+        - qtbase5-dev-tools
+
+    script:
+      - mkdir -p build-debug
+      - cd build-debug
+      - cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_SDL_FRONTEND=YES -DENABLE_QT_FRONTEND=YES ..
+      - ninja
