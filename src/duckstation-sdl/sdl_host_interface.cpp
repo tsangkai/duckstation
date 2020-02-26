@@ -1,4 +1,5 @@
 #include "sdl_host_interface.h"
+#include "sdl_key_names.h"
 #include "common/assert.h"
 #include "common/byte_stream.h"
 #include "common/log.h"
@@ -9,7 +10,6 @@
 #include "core/system.h"
 #include "frontend-common/icon.h"
 #include "frontend-common/imgui_styles.h"
-#include "frontend-common/sdl_audio_stream.h"
 #include "frontend-common/sdl_controller_interface.h"
 #include "imgui_impl_sdl.h"
 #include "opengl_host_display.h"
@@ -227,12 +227,15 @@ std::unique_ptr<AudioStream> SDLHostInterface::CreateAudioStream(AudioBackend ba
   }
 }
 
+std::optional<CommonHostInterface::HostKeyCode> SDLHostInterface::GetHostKeyCode(const std::string_view key_code) const
+{
+  std::optional<u32> code = getsd
+}
+
 void SDLHostInterface::OnSystemCreated()
 {
   HostInterface::OnSystemCreated();
 
-  UpdateKeyboardControllerMapping();
-  g_sdl_controller_interface.SetDefaultBindings();
   ClearImGuiFocus();
 }
 
@@ -253,8 +256,8 @@ void SDLHostInterface::OnControllerTypeChanged(u32 slot)
 {
   HostInterface::OnControllerTypeChanged(slot);
 
-  UpdateKeyboardControllerMapping();
-  g_sdl_controller_interface.SetDefaultBindings();
+  SDLSettingsInterface si(GetSettingsFileName().c_str());
+  UpdateInputMap(si);
 }
 
 void SDLHostInterface::RunLater(std::function<void()> callback)
@@ -291,14 +294,20 @@ void SDLHostInterface::SetFullscreen(bool enabled)
   m_fullscreen = enabled;
 }
 
+void SDLHostInterface::ToggleFullscreen()
+{
+  SetFullscreen(!IsFullscreen());
+}
+
 std::unique_ptr<SDLHostInterface> SDLHostInterface::Create()
 {
   std::unique_ptr<SDLHostInterface> intf = std::make_unique<SDLHostInterface>();
 
   // Settings need to be loaded prior to creating the window for OpenGL bits.
   SDLSettingsInterface si(intf->GetSettingsFileName().c_str());
-  intf->m_settings_copy.Load(si);
-  intf->m_settings = intf->m_settings_copy;
+  intf->CheckSettings(si);
+  intf->m_settings.Load(si);
+  intf->m_settings_copy = intf->m_settings;
   intf->m_fullscreen = intf->m_settings_copy.display_fullscreen;
 
   if (!intf->CreateSDLWindow())
@@ -388,15 +397,15 @@ void SDLHostInterface::HandleSDLEvent(const SDL_Event* event)
     case SDL_KEYDOWN:
     case SDL_KEYUP:
     {
-      if (!ImGui::GetIO().WantCaptureKeyboard)
-        HandleSDLKeyEvent(event);
+      if (!ImGui::GetIO().WantCaptureKeyboard && event->key.repeat == 0)
+      {
+        const HostKeyCode code = static_cast<HostKeyCode>(static_cast<u32>(event->key.keysym.sym) |
+                                                          static_cast<u32>(event->key.keysym.mod) << 16);
+        const bool pressed = (event->type == SDL_KEYUP);
+        HandleHostKeyEvent(code, pressed);
+      }
     }
     break;
-
-    case SDL_CONTROLLERDEVICEADDED:
-    case SDL_CONTROLLERDEVICEREMOVED:
-      g_sdl_controller_interface.SetDefaultBindings();
-      break;
 
     case SDL_CONTROLLERBUTTONDOWN:
     case SDL_CONTROLLERBUTTONUP:
@@ -421,203 +430,6 @@ void SDLHostInterface::HandleSDLEvent(const SDL_Event* event)
     }
     break;
   }
-}
-
-void SDLHostInterface::HandleSDLKeyEvent(const SDL_Event* event)
-{
-  const bool repeat = event->key.repeat != 0;
-  if (!repeat && HandleSDLKeyEventForController(event))
-    return;
-
-  const bool pressed = (event->type == SDL_KEYDOWN);
-  switch (event->key.keysym.scancode)
-  {
-    case SDL_SCANCODE_F1:
-    case SDL_SCANCODE_F2:
-    case SDL_SCANCODE_F3:
-    case SDL_SCANCODE_F4:
-    case SDL_SCANCODE_F5:
-    case SDL_SCANCODE_F6:
-    case SDL_SCANCODE_F7:
-    case SDL_SCANCODE_F8:
-    {
-      if (!pressed)
-      {
-        const u32 index = event->key.keysym.scancode - SDL_SCANCODE_F1 + 1;
-        if (event->key.keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT))
-          SaveState(true, index);
-        else
-          LoadState(true, index);
-      }
-    }
-    break;
-
-    case SDL_SCANCODE_RETURN:
-    case SDL_SCANCODE_KP_ENTER:
-    {
-      if ((event->key.keysym.mod & (KMOD_LALT | KMOD_RALT)) && !pressed)
-        SetFullscreen(!m_fullscreen);
-    }
-    break;
-
-    case SDL_SCANCODE_TAB:
-    {
-      if (!repeat)
-      {
-        m_speed_limiter_temp_disabled = pressed;
-        UpdateSpeedLimiterState();
-      }
-    }
-    break;
-
-    case SDL_SCANCODE_PAUSE:
-    {
-      if (pressed)
-        PauseSystem(!m_paused);
-    }
-    break;
-
-    case SDL_SCANCODE_SPACE:
-    {
-      if (pressed)
-        DoFrameStep();
-    }
-    break;
-
-    case SDL_SCANCODE_HOME:
-    {
-      if (pressed && !repeat && m_system)
-      {
-        m_settings.speed_limiter_enabled = !m_settings.speed_limiter_enabled;
-        m_settings_copy.speed_limiter_enabled = m_settings.speed_limiter_enabled;
-        UpdateSpeedLimiterState();
-        AddOSDMessage(m_settings.speed_limiter_enabled ? "Speed limiter enabled." : "Speed limiter disabled.");
-      }
-    }
-    break;
-
-    case SDL_SCANCODE_END:
-    {
-      if (pressed)
-        ToggleSoftwareRendering();
-    }
-    break;
-
-    case SDL_SCANCODE_PAGEUP:
-    case SDL_SCANCODE_PAGEDOWN:
-    {
-      if (pressed)
-        ModifyResolutionScale(event->key.keysym.scancode == SDL_SCANCODE_PAGEUP ? 1 : -1);
-    }
-    break;
-  }
-}
-
-void SDLHostInterface::UpdateKeyboardControllerMapping()
-{
-  m_keyboard_button_mapping.fill(-1);
-
-  const Controller* controller = m_system ? m_system->GetController(0) : nullptr;
-  if (controller)
-  {
-#define SET_BUTTON_MAP(action, name)                                                                                   \
-  m_keyboard_button_mapping[static_cast<int>(action)] = controller->GetButtonCodeByName(name).value_or(-1)
-
-    SET_BUTTON_MAP(KeyboardControllerAction::Up, "Up");
-    SET_BUTTON_MAP(KeyboardControllerAction::Down, "Down");
-    SET_BUTTON_MAP(KeyboardControllerAction::Left, "Left");
-    SET_BUTTON_MAP(KeyboardControllerAction::Right, "Right");
-    SET_BUTTON_MAP(KeyboardControllerAction::Triangle, "Triangle");
-    SET_BUTTON_MAP(KeyboardControllerAction::Cross, "Cross");
-    SET_BUTTON_MAP(KeyboardControllerAction::Square, "Square");
-    SET_BUTTON_MAP(KeyboardControllerAction::Circle, "Circle");
-    SET_BUTTON_MAP(KeyboardControllerAction::L1, "L1");
-    SET_BUTTON_MAP(KeyboardControllerAction::R1, "R1");
-    SET_BUTTON_MAP(KeyboardControllerAction::L2, "L2");
-    SET_BUTTON_MAP(KeyboardControllerAction::R2, "R2");
-    SET_BUTTON_MAP(KeyboardControllerAction::Start, "Start");
-    SET_BUTTON_MAP(KeyboardControllerAction::Select, "Select");
-
-#undef SET_BUTTON_MAP
-  }
-}
-
-bool SDLHostInterface::HandleSDLKeyEventForController(const SDL_Event* event)
-{
-  const bool pressed = (event->type == SDL_KEYDOWN);
-  Controller* controller;
-
-#define DO_ACTION(action)                                                                                              \
-  if ((controller = m_system ? m_system->GetController(0) : nullptr) != nullptr &&                                     \
-      m_keyboard_button_mapping[static_cast<int>(action)])                                                             \
-  {                                                                                                                    \
-    controller->SetButtonState(m_keyboard_button_mapping[static_cast<int>(action)], pressed);                          \
-  }
-
-  switch (event->key.keysym.scancode)
-  {
-    case SDL_SCANCODE_KP_8:
-    case SDL_SCANCODE_I:
-      DO_ACTION(KeyboardControllerAction::Triangle);
-      return true;
-    case SDL_SCANCODE_KP_2:
-    case SDL_SCANCODE_K:
-      DO_ACTION(KeyboardControllerAction::Cross);
-      return true;
-    case SDL_SCANCODE_KP_4:
-    case SDL_SCANCODE_J:
-      DO_ACTION(KeyboardControllerAction::Square);
-      return true;
-    case SDL_SCANCODE_KP_6:
-    case SDL_SCANCODE_L:
-      DO_ACTION(KeyboardControllerAction::Circle);
-      return true;
-
-    case SDL_SCANCODE_W:
-    case SDL_SCANCODE_UP:
-      DO_ACTION(KeyboardControllerAction::Up);
-      return true;
-    case SDL_SCANCODE_S:
-    case SDL_SCANCODE_DOWN:
-      DO_ACTION(KeyboardControllerAction::Down);
-      return true;
-    case SDL_SCANCODE_A:
-    case SDL_SCANCODE_LEFT:
-      DO_ACTION(KeyboardControllerAction::Left);
-      return true;
-    case SDL_SCANCODE_D:
-    case SDL_SCANCODE_RIGHT:
-      DO_ACTION(KeyboardControllerAction::Right);
-      return true;
-
-    case SDL_SCANCODE_Q:
-      DO_ACTION(KeyboardControllerAction::L1);
-      return true;
-    case SDL_SCANCODE_E:
-      DO_ACTION(KeyboardControllerAction::R1);
-      return true;
-
-    case SDL_SCANCODE_1:
-      DO_ACTION(KeyboardControllerAction::L2);
-      return true;
-    case SDL_SCANCODE_3:
-      DO_ACTION(KeyboardControllerAction::R2);
-      return true;
-
-    case SDL_SCANCODE_RETURN:
-      DO_ACTION(KeyboardControllerAction::Start);
-      return true;
-    case SDL_SCANCODE_BACKSPACE:
-      DO_ACTION(KeyboardControllerAction::Select);
-      return true;
-
-    default:
-      break;
-  }
-
-#undef DO_ACTION
-
-  return false;
 }
 
 void SDLHostInterface::DrawImGui()
