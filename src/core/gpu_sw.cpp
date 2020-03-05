@@ -128,6 +128,8 @@ void GPU_SW::UpdateDisplay()
 void GPU_SW::DispatchRenderCommand(RenderCommand rc, u32 num_vertices, const u32* command_ptr)
 {
   const bool dithering_enable = rc.IsDitheringEnabled() && m_GPUSTAT.dither_enable;
+  if (rc.texture_enable)
+    DumpCurrentTexture();
 
   switch (rc.primitive)
   {

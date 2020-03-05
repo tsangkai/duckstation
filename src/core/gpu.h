@@ -8,6 +8,7 @@
 #include <deque>
 #include <memory>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 class StateWrapper;
@@ -118,6 +119,8 @@ public:
   {
     std::size_t operator()(const TextureHash& th) const;
   };
+
+  using DumpedTextureSet = std::unordered_set<TextureHash, TextureHashHasher>;
 
   // 4x4 dither matrix.
   static constexpr s32 DITHER_MATRIX[4][4] = {{-4, +0, -3, +1},  // row 0
@@ -367,7 +370,7 @@ protected:
   TextureHash GetCurrentTextureHash() const;
 
   /// Dumps any currently-bound texture if the files do not exist.
-  void DumpCurrentTexture() const;
+  void DumpCurrentTexture();
 
   u32 ReadGPUREAD();
   void WriteGP0(u32 value);
@@ -663,6 +666,8 @@ private:
   bool HandleCopyRectangleVRAMToVRAMCommand(const u32*& command_ptr, u32 command_size);
 
   static const GP0CommandHandlerTable s_GP0_command_handler_table;
+
+  std::unique_ptr<DumpedTextureSet> m_dumped_textures;
 };
 
 IMPLEMENT_ENUM_CLASS_BITWISE_OPERATORS(GPU::TextureMode);
