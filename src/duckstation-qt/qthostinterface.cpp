@@ -46,8 +46,12 @@ QtHostInterface::~QtHostInterface()
 void QtHostInterface::ReportError(const char* message)
 {
   HostInterface::ReportError(message);
-
+  
+  emit setFullscreenRequested(false);
   emit errorReported(QString::fromLocal8Bit(message));
+
+  if (m_settings.start_fullscreen)
+    emit setFullscreenRequested(true);
 }
 
 void QtHostInterface::ReportMessage(const char* message)
@@ -59,7 +63,14 @@ void QtHostInterface::ReportMessage(const char* message)
 
 bool QtHostInterface::ConfirmMessage(const char* message)
 {
-  return messageConfirmed(QString::fromLocal8Bit(message));
+  emit setFullscreenRequested(false);
+
+  const bool result = messageConfirmed(QString::fromLocal8Bit(message));
+
+  if (m_settings.start_fullscreen)
+    emit setFullscreenRequested(true);
+
+  return result;
 }
 
 QVariant QtHostInterface::getSettingValue(const QString& name, const QVariant& default_value)
@@ -250,7 +261,7 @@ std::optional<CommonHostInterface::HostKeyCode> QtHostInterface::GetHostKeyCode(
 
 void QtHostInterface::OnSystemCreated()
 {
-  HostInterface::OnSystemCreated();
+  CommonHostInterface::OnSystemCreated();
 
   wakeThread();
   destroyBackgroundControllerPollTimer();
@@ -260,7 +271,7 @@ void QtHostInterface::OnSystemCreated()
 
 void QtHostInterface::OnSystemPaused(bool paused)
 {
-  HostInterface::OnSystemPaused(paused);
+  CommonHostInterface::OnSystemPaused(paused);
 
   emit emulationPaused(paused);
 
@@ -391,14 +402,7 @@ void QtHostInterface::pauseSystem(bool paused)
     return;
   }
 
-  if (!m_system)
-    return;
-
-  m_paused = paused;
-  m_audio_stream->PauseOutput(paused);
-  if (!paused)
-    wakeThread();
-  emit emulationPaused(paused);
+  CommonHostInterface::PauseSystem(paused);
 }
 
 void QtHostInterface::changeDisc(const QString& new_disc_filename)

@@ -10,7 +10,9 @@
 #include "qtsettingsinterface.h"
 #include "settingsdialog.h"
 #include "settingwidgetbinder.h"
+#include <QtCore/QDebug>
 #include <QtCore/QFileInfo>
+#include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtGui/QDesktopServices>
 #include <QtWidgets/QFileDialog>
@@ -38,6 +40,7 @@ MainWindow::~MainWindow()
 void MainWindow::reportError(const QString& message)
 {
   QMessageBox::critical(this, tr("DuckStation"), message, QMessageBox::Ok);
+  focusDisplayWidget();
 }
 
 void MainWindow::reportMessage(const QString& message)
@@ -91,6 +94,9 @@ void MainWindow::destroyDisplayWindow()
 
 void MainWindow::setFullscreen(bool fullscreen)
 {
+  if (fullscreen == m_display_widget->isFullScreen())
+    return;
+
   if (fullscreen)
   {
     m_ui.mainContainer->setCurrentIndex(0);
@@ -104,7 +110,7 @@ void MainWindow::setFullscreen(bool fullscreen)
     m_ui.mainContainer->setCurrentIndex(1);
   }
 
-  m_display_widget->setFocus();
+  QTimer::singleShot(0, m_display_widget, qOverload<>(&QWidget::setFocus));
 
   QSignalBlocker blocker(m_ui.actionFullscreen);
   m_ui.actionFullscreen->setChecked(fullscreen);
@@ -115,12 +121,23 @@ void MainWindow::toggleFullscreen()
   setFullscreen(!m_display_widget->isFullScreen());
 }
 
+#include "common/windows_headers.h"
+
 void MainWindow::focusDisplayWidget()
 {
   if (m_ui.mainContainer->currentIndex() != 1)
     return;
 
-  m_display_widget->setFocus();
+  // QTimer::singleShot(0, m_display_widget, qOverload<>(&QWidget::setFocus));
+  QTimer::singleShot(0, [this]() {
+    QWidget* old_focus_widget = QApplication::focusWidget();
+    //SetFocus(reinterpret_cast<HWND>(m_display_widget->windowHandle()->winId()));
+    m_display_widget->setFocus();
+    
+    QWidget* new_focus_widget = QApplication::focusWidget();
+    qWarning() << "old: " << old_focus_widget << (old_focus_widget ? old_focus_widget->objectName() : QString())
+               << ", new: " << new_focus_widget << (new_focus_widget ? new_focus_widget->objectName() : QString());
+  });
 }
 
 void MainWindow::onEmulationStarted()
