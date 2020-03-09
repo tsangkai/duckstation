@@ -60,7 +60,7 @@ void MainWindow::createDisplayWindow(QThread* worker_thread, bool use_debug_devi
   QtDisplayWindow* display_window = m_host_interface->createDisplayWindow();
   DebugAssert(display_window);
 
-  m_display_widget = QWidget::createWindowContainer(display_window, m_ui.mainContainer);
+  m_display_widget = display_window; //QWidget::createWindowContainer(display_window, m_ui.mainContainer);
   DebugAssert(m_display_widget);
 
   m_display_widget->setFocusPolicy(Qt::StrongFocus);

@@ -1,7 +1,7 @@
 #pragma once
-#include "common/windows_headers.h"
 #include "common/d3d11/stream_buffer.h"
 #include "common/d3d11/texture.h"
+#include "common/windows_headers.h"
 #include "core/host_display.h"
 #include "qtdisplaywindow.h"
 #include <d3d11.h>
@@ -16,7 +16,7 @@ public:
   template<typename T>
   using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-  D3D11DisplayWindow(QtHostInterface* host_interface, QWindow* parent);
+  D3D11DisplayWindow(QtHostInterface* host_interface, QWidget* parent);
   ~D3D11DisplayWindow();
 
   HostDisplay* getHostDisplayInterface() override;

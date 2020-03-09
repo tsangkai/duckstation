@@ -22,7 +22,7 @@ class OpenGLDisplayWindow final : public QtDisplayWindow, public HostDisplay
   Q_OBJECT
 
 public:
-  OpenGLDisplayWindow(QtHostInterface* host_interface, QWindow* parent);
+  OpenGLDisplayWindow(QtHostInterface* host_interface, QWidget* parent);
   ~OpenGLDisplayWindow();
 
   HostDisplay* getHostDisplayInterface() override;

@@ -96,10 +96,10 @@ private:
   u32 m_height;
 };
 
-OpenGLDisplayWindow::OpenGLDisplayWindow(QtHostInterface* host_interface, QWindow* parent)
+OpenGLDisplayWindow::OpenGLDisplayWindow(QtHostInterface* host_interface, QWidget* parent)
   : QtDisplayWindow(host_interface, parent)
 {
-  setSurfaceType(QWindow::OpenGLSurface);
+  //setSurfaceType(QWindow::OpenGLSurface);
 }
 
 OpenGLDisplayWindow::~OpenGLDisplayWindow() = default;
@@ -126,7 +126,7 @@ void* OpenGLDisplayWindow::GetRenderContext() const
 
 void* OpenGLDisplayWindow::GetRenderWindow() const
 {
-  return const_cast<QWindow*>(static_cast<const QWindow*>(this));
+  return const_cast<QWidget*>(static_cast<const QWidget*>(this));
 }
 
 void OpenGLDisplayWindow::ChangeRenderWindow(void* new_window)
@@ -167,7 +167,7 @@ void OpenGLDisplayWindow::SetVSync(bool enabled)
   GLint current_fbo = 0;
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &current_fbo);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  SetSwapInterval(this, m_gl_context.get(), enabled ? 1 : 0);
+  //SetSwapInterval(this, m_gl_context.get(), enabled ? 1 : 0);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, current_fbo);
 }
 
@@ -236,7 +236,7 @@ bool OpenGLDisplayWindow::createDeviceContext(QThread* worker_thread, bool debug
     {{4, 6}, {4, 5}, {4, 4}, {4, 3}, {4, 2}, {4, 1}, {4, 0}, {3, 3}, {3, 2}, {3, 1}, {3, 0}}};
   static constexpr std::array<std::tuple<int, int>, 4> es_versions_to_try = {{{3, 2}, {3, 1}, {3, 0}}};
 
-  QSurfaceFormat surface_format = requestedFormat();
+  QSurfaceFormat surface_format;// = requestedFormat();
   surface_format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
   surface_format.setSwapInterval(0);
   surface_format.setRenderableType(QSurfaceFormat::OpenGL);
@@ -280,7 +280,7 @@ bool OpenGLDisplayWindow::createDeviceContext(QThread* worker_thread, bool debug
   Log_InfoPrintf("Got a %s %d.%d context", (m_gl_context->isOpenGLES() ? "OpenGL ES" : "desktop OpenGL"),
                  surface_format.majorVersion(), surface_format.minorVersion());
 
-  if (!m_gl_context->makeCurrent(this))
+  if (false)//(!m_gl_context->makeCurrent(this))
   {
     Log_ErrorPrintf("Failed to make GL context current on UI thread");
     m_gl_context.reset();
@@ -301,8 +301,8 @@ bool OpenGLDisplayWindow::createDeviceContext(QThread* worker_thread, bool debug
 
 bool OpenGLDisplayWindow::initializeDeviceContext(bool debug_device)
 {
-  if (!m_gl_context->makeCurrent(this))
-    return false;
+  //if (!m_gl_context->makeCurrent(this))
+    //return false;
 
   s_thread_gl_context = m_gl_context.get();
 
@@ -451,8 +451,8 @@ void OpenGLDisplayWindow::Render()
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-  m_gl_context->makeCurrent(this);
-  m_gl_context->swapBuffers(this);
+  //m_gl_context->makeCurrent(this);
+  //m_gl_context->swapBuffers(this);
 
   ImGui::NewFrame();
   ImGui_ImplOpenGL3_NewFrame();

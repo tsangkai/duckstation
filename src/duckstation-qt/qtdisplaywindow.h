@@ -1,5 +1,5 @@
 #pragma once
-#include <QtGui/QWindow>
+#include <QtWidgets/QWidget>
 #include "common/types.h"
 
 class QKeyEvent;
@@ -9,12 +9,12 @@ class HostDisplay;
 
 class QtHostInterface;
 
-class QtDisplayWindow : public QWindow
+class QtDisplayWindow : public QWidget
 {
   Q_OBJECT
 
 public:
-  QtDisplayWindow(QtHostInterface* host_interface, QWindow* parent);
+  QtDisplayWindow(QtHostInterface* host_interface, QWidget* parent);
   virtual ~QtDisplayWindow();
 
   virtual HostDisplay* getHostDisplayInterface();

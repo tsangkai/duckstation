@@ -4,8 +4,8 @@
 #include "qtutils.h"
 #include <QtGui/QKeyEvent>
 
-QtDisplayWindow::QtDisplayWindow(QtHostInterface* host_interface, QWindow* parent)
-  : QWindow(parent), m_host_interface(host_interface)
+QtDisplayWindow::QtDisplayWindow(QtHostInterface* host_interface, QWidget* parent)
+  : QWidget(parent), m_host_interface(host_interface)
 {
 }
 
@@ -99,7 +99,7 @@ void QtDisplayWindow::keyReleaseEvent(QKeyEvent* event)
 
 void QtDisplayWindow::resizeEvent(QResizeEvent* event)
 {
-  QWindow::resizeEvent(event);
+  QWidget::resizeEvent(event);
 
   const int width = static_cast<int>(static_cast<qreal>(event->size().width()) * devicePixelRatio());
   const int height = static_cast<int>(static_cast<qreal>(event->size().height()) * devicePixelRatio());

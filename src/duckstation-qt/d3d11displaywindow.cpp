@@ -61,7 +61,7 @@ private:
   bool m_dynamic;
 };
 
-D3D11DisplayWindow::D3D11DisplayWindow(QtHostInterface* host_interface, QWindow* parent)
+D3D11DisplayWindow::D3D11DisplayWindow(QtHostInterface* host_interface, QWidget* parent)
   : QtDisplayWindow(host_interface, parent)
 {
 }
@@ -90,7 +90,7 @@ void* D3D11DisplayWindow::GetRenderContext() const
 
 void* D3D11DisplayWindow::GetRenderWindow() const
 {
-  return const_cast<QWindow*>(static_cast<const QWindow*>(this));
+  return const_cast<QWidget*>(static_cast<const QWidget*>(this));
 }
 
 void D3D11DisplayWindow::ChangeRenderWindow(void* new_window)
