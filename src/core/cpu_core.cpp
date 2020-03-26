@@ -522,7 +522,7 @@ void Core::WriteCop0Reg(Cop0Reg reg, u32 value)
 
 void Core::WriteCacheControl(u32 value)
 {
-  Log_WarningPrintf("Cache control <- 0x%08X", value);
+  Log_DevPrintf("Cache control <- 0x%08X", value);
   m_cache_control = value;
 }
 
