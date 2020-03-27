@@ -1169,7 +1169,7 @@ void HostInterface::StopDumpingAudio()
 }
 
 bool HostInterface::SaveScreenshot(const char* filename /* = nullptr */, bool full_resolution /* = true */,
-                                   bool apply_aspect_ratio /* = true */)
+                                   bool apply_aspect_ratio /* = true */, bool compress_on_thread /* = true */)
 {
   if (!m_system)
     return false;
@@ -1193,7 +1193,7 @@ bool HostInterface::SaveScreenshot(const char* filename /* = nullptr */, bool fu
     filename = auto_filename.c_str();
   }
 
-  if (!m_display->WriteDisplayTextureToFile(filename, full_resolution, apply_aspect_ratio))
+  if (!m_display->WriteDisplayTextureToFile(filename, full_resolution, apply_aspect_ratio, compress_on_thread))
   {
     AddFormattedOSDMessage(10.0f, "Failed to save screenshot to '%s'", filename);
     return false;

@@ -79,7 +79,8 @@ public:
   void StopDumpingAudio();
 
   /// Saves a screenshot to the specified file. IF no file name is provided, one will be generated automatically.
-  bool SaveScreenshot(const char* filename = nullptr, bool full_resolution = true, bool apply_aspect_ratio = true);
+  bool SaveScreenshot(const char* filename = nullptr, bool full_resolution = true, bool apply_aspect_ratio = true,
+                      bool compress_on_thread = true);
 
   virtual void ReportError(const char* message);
   virtual void ReportMessage(const char* message);
