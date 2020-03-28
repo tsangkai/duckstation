@@ -408,7 +408,7 @@ out vec4 o_col0;
 
 void main()
 {
-  o_col0 = texture(samp0, v_tex0);
+  o_col0 = vec4(texture(samp0, v_tex0).rgb, 1.0);
 }
 )";
 
@@ -464,7 +464,7 @@ void OpenGLDisplayWidget::Render()
 {
   glDisable(GL_SCISSOR_TEST);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   renderDisplay();
