@@ -56,6 +56,9 @@ void Settings::Load(SettingsInterface& si)
   controller_types[1] =
     ParseControllerTypeName(si.GetStringValue("Controller2", "Type", "None").c_str()).value_or(ControllerType::None);
 
+  controller_axis_scales[0] = si.GetFloatValue("Controller1", "AxisScale", 1.00f);
+  controller_axis_scales[1] = si.GetFloatValue("Controller2", "AxisScale", 1.00f);
+
   memory_card_paths[0] = si.GetStringValue("MemoryCards", "Card1Path", "memcards/shared_card_1.mcd");
   memory_card_paths[1] = si.GetStringValue("MemoryCards", "Card2Path", "");
 
@@ -111,14 +114,28 @@ void Settings::Save(SettingsInterface& si) const
   si.SetBoolValue("BIOS", "PatchFastBoot", bios_patch_fast_boot);
 
   if (controller_types[0] != ControllerType::None)
+  {
     si.SetStringValue("Controller1", "Type", GetControllerTypeName(controller_types[0]));
+
+    if (controller_types[0] == ControllerType::AnalogController)
+      si.SetFloatValue("Controller1", "AxisScale", controller_axis_scales[0]);
+  }
   else
+  {
     si.DeleteValue("Controller1", "Type");
+  }
 
   if (controller_types[1] != ControllerType::None)
+  {
     si.SetStringValue("Controller2", "Type", GetControllerTypeName(controller_types[1]));
+
+    if (controller_types[1] == ControllerType::AnalogController)
+      si.SetFloatValue("Controller2", "AxisScale", controller_axis_scales[1]);
+  }
   else
+  {
     si.DeleteValue("Controller2", "Type");
+  }
 
   if (!memory_card_paths[0].empty())
     si.SetStringValue("MemoryCards", "Card1Path", memory_card_paths[0].c_str());

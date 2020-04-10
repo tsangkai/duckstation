@@ -936,6 +936,10 @@ void HostInterface::UpdateSettings(const std::function<void()>& apply_callback)
   const bool old_cdrom_read_thread = m_settings.cdrom_read_thread;
   std::array<ControllerType, NUM_CONTROLLER_AND_CARD_PORTS> old_controller_types = m_settings.controller_types;
 
+  // Axis scales are currently into m_settings during the callback and get applied
+  // as a runtime value in the InputAxisHandler callback
+  //std::array<float, NUM_CONTROLLER_AND_CARD_PORTS> old_controller_axis_scales = m_settings.controller_axis_scales;
+
   apply_callback();
 
   if (m_system)

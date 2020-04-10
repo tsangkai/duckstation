@@ -250,7 +250,7 @@ void CommonHostInterface::UpdateControllerInputMap(SettingsInterface& si)
 
           Controller* controller = m_system->GetController(controller_index);
           if (controller)
-            controller->SetAxisState(axis_code, value);
+            controller->SetAxisState(axis_code, value * m_system->GetSettings().controller_axis_scales[controller_index]);
         });
       }
     }
