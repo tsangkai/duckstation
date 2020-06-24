@@ -67,19 +67,37 @@ void HostDisplay::CalculateDrawRect(s32 window_width, s32 window_height, s32* ou
                                     s32* out_height, s32* out_left_padding, s32* out_top_padding, float* out_scale,
                                     float* out_y_scale) const
 {
+  const bool par_1_to_1 = (m_display_pixel_aspect_ratio <= 0.0f);
+
   const float y_scale =
-    (static_cast<float>(m_display_width) / static_cast<float>(m_display_height)) / m_display_pixel_aspect_ratio;
-  const float display_width = static_cast<float>(m_display_width);
+    (static_cast<float>(m_display_width) / static_cast<float>(m_display_height)) / std::abs(m_display_pixel_aspect_ratio);
+  const float x_scale = (par_1_to_1 ? y_scale : 1.0f);
+  const float display_width = static_cast<float>(m_display_width) * x_scale;
   const float display_height = static_cast<float>(m_display_height) * y_scale;
-  const float active_left = static_cast<float>(m_display_active_left);
+  const float active_left = static_cast<float>(m_display_active_left) * x_scale;
   const float active_top = static_cast<float>(m_display_active_top) * y_scale;
-  const float active_width = static_cast<float>(m_display_active_width);
+  const float active_width = static_cast<float>(m_display_active_width) * x_scale;
   const float active_height = static_cast<float>(m_display_active_height) * y_scale;
   if (out_y_scale)
     *out_y_scale = y_scale;
 
+  // Log_InfoPrintf("m_display_width %d | m_display_height %d | m_display_active_left %d | m_display_active_top %d | "
+  //                "m_display_active_width %d | m_display_active_height %d",
+  //                m_display_width, m_display_height, m_display_active_left, m_display_active_top,
+  //                m_display_active_width, m_display_active_height);
+
+  Log_InfoPrintf("y_scale %f", y_scale);
+  Log_InfoPrintf("display_width %f, display_height %f", display_width, display_height);
+
+  // Log_InfoPrintf("Window Width %f | Window Height %f | Display Width %f | Display Height %f",
+  //                 window_width, window_height, display_width, display_height);
+  // Log_InfoPrintf("Active Left %f | Active Top %f | Active Width %f | Active Height %f",
+  //                 active_left, active_top, active_width, active_height);
+
   // now fit it within the window
   const float window_ratio = static_cast<float>(window_width) / static_cast<float>(window_height);
+
+  Log_InfoPrintf("window_ratio %f", window_ratio);
 
   float scale;
   if ((display_width / display_height) >= window_ratio)
@@ -123,6 +141,7 @@ void HostDisplay::CalculateDrawRect(s32 window_width, s32 window_height, s32* ou
   *out_top = static_cast<s32>(active_top * scale);
   if (out_scale)
     *out_scale = scale;
+
 }
 
 std::tuple<s32, s32, s32, s32> HostDisplay::CalculateDrawRect(s32 window_width, s32 window_height, s32 top_margin) const
@@ -274,7 +293,7 @@ bool HostDisplay::WriteDisplayTextureToFile(const char* filename, bool full_reso
     else
     {
       resize_height = std::abs(m_display_texture_view_height);
-      resize_width = static_cast<s32>(static_cast<float>(resize_height) * m_display_pixel_aspect_ratio);
+      resize_width = static_cast<s32>(static_cast<float>(resize_height) * std::abs(m_display_pixel_aspect_ratio));
     }
   }
   else if (apply_aspect_ratio)
