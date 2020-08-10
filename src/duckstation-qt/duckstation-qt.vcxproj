@@ -197,6 +197,7 @@
     <None Include="translations\duckstation-qt_de.ts" />
     <None Include="translations\duckstation-qt_pt-br.ts" />
     <None Include="translations\duckstation-qt_pt-pt.ts" />
+    <None Include="translations\duckstation-qt_zh-TW.ts" />
   </ItemGroup>
   <ItemGroup>
     <QtUi Include="autoupdaterdialog.ui">
