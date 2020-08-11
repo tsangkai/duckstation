@@ -6,7 +6,7 @@
     <message>
         <location filename="../aboutdialog.ui" line="14"/>
         <source>About DuckStation</source>
-        <translation type="unfinished"></translation>
+        <translation>關於 DuckStation</translation>
     </message>
     <message>
         <location filename="../aboutdialog.ui" line="101"/>
@@ -26,7 +26,7 @@
     <message>
         <location filename="../aboutdialog.cpp" line="32"/>
         <source>Authors</source>
-        <translation type="unfinished"></translation>
+        <translation>作者</translation>
     </message>
     <message>
         <location filename="../aboutdialog.cpp" line="33"/>
@@ -36,7 +36,7 @@
     <message>
         <location filename="../aboutdialog.cpp" line="34"/>
         <source>License</source>
-        <translation type="unfinished"></translation>
+        <translation>授權條款</translation>
     </message>
 </context>
 <context>
@@ -124,7 +124,7 @@
     <message>
         <location filename="../advancedsettingswidget.ui" line="207"/>
         <source>System Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>系統設定</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="213"/>
@@ -188,13 +188,13 @@
     <message>
         <location filename="../audiosettingswidget.ui" line="126"/>
         <source>Volume:</source>
-        <translation type="unfinished"></translation>
+        <translation>音量:</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="152"/>
         <location filename="../audiosettingswidget.cpp" line="53"/>
         <source>Mute</source>
-        <translation type="unfinished"></translation>
+        <translation>靜音</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="159"/>
@@ -245,7 +245,7 @@
     <message>
         <location filename="../audiosettingswidget.cpp" line="51"/>
         <source>Volume</source>
-        <translation type="unfinished"></translation>
+        <translation>音量</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.cpp" line="52"/>
@@ -290,7 +290,7 @@
     <message>
         <location filename="../autoupdaterdialog.ui" line="47"/>
         <source>New Version: </source>
-        <translation type="unfinished"></translation>
+        <translation>新版本:</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="54"/>
@@ -300,7 +300,7 @@
     <message>
         <location filename="../autoupdaterdialog.ui" line="83"/>
         <source>Download and Install...</source>
-        <translation type="unfinished"></translation>
+        <translation>下載並安裝</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="90"/>
@@ -310,7 +310,7 @@
     <message>
         <location filename="../autoupdaterdialog.ui" line="97"/>
         <source>Remind Me Later</source>
-        <translation type="unfinished"></translation>
+        <translation>稍後提醒我</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="81"/>
@@ -500,7 +500,7 @@
     <message>
         <location filename="../controllersettingswidget.cpp" line="349"/>
         <source>Select File</source>
-        <translation type="unfinished"></translation>
+        <translation>選擇檔案</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="397"/>
@@ -669,7 +669,7 @@
     <message>
         <location filename="../gpusettingswidget.cpp" line="63"/>
         <source>Renderer</source>
-        <translation type="unfinished"></translation>
+        <translation>渲染器</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.cpp" line="64"/>
@@ -1451,12 +1451,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="95"/>
         <source>Language</source>
-        <translation type="unfinished"></translation>
+        <translation>語言</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="119"/>
         <source>&amp;Help</source>
-        <translation type="unfinished"></translation>
+        <translation>說明 (&amp;H)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="131"/>
@@ -1466,7 +1466,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="135"/>
         <source>Switch GPU Renderer</source>
-        <translation type="unfinished"></translation>
+        <translation>切換 GPU 渲染器</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="140"/>
@@ -1511,7 +1511,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="260"/>
         <source>&amp;Pause</source>
-        <translation type="unfinished"></translation>
+        <translation>暫停 (&amp;P)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="269"/>
@@ -1526,7 +1526,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="283"/>
         <source>E&amp;xit</source>
-        <translation type="unfinished"></translation>
+        <translation>離開 (&amp;x)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="292"/>
@@ -1546,12 +1546,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="319"/>
         <source>&amp;GPU Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>GPU 設定... (&amp;G)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="328"/>
         <source>Fullscreen</source>
-        <translation type="unfinished"></translation>
+        <translation>全螢幕</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="333"/>
@@ -1581,7 +1581,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="358"/>
         <source>&amp;About...</source>
-        <translation type="unfinished"></translation>
+        <translation>關於 (&amp;A)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="367"/>
@@ -1956,12 +1956,12 @@ The saves will not be recoverable.</source>
     <message>
         <location filename="../settingsdialog.ui" line="108"/>
         <source>Memory Card Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>記憶卡設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="117"/>
         <source>GPU Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>GPU 設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="126"/>
