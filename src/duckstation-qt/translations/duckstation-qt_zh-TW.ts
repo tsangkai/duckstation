@@ -879,7 +879,7 @@
     <message>
         <location filename="../gamelistmodel.cpp" line="295"/>
         <source>Compatibility</source>
-        <translation type="unfinished"></translation>
+        <translation>相容性</translation>
     </message>
 </context>
 <context>
