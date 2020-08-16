@@ -340,7 +340,7 @@
     <message>
         <location filename="../autoupdaterdialog.cpp" line="233"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>取消</translation>
     </message>
 </context>
 <context>
@@ -353,38 +353,38 @@
     <message>
         <location filename="../consolesettingswidget.ui" line="32"/>
         <source>Console</source>
-        <translation type="unfinished"></translation>
+        <translation>控制台</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="38"/>
         <source>Region:</source>
-        <translation type="unfinished"></translation>
+        <translation>地區:</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="48"/>
         <source>BIOS Image Path:</source>
-        <translation type="unfinished"></translation>
+        <translation>BIOS 映像檔路徑:</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="55"/>
         <location filename="../consolesettingswidget.cpp" line="35"/>
         <source>Fast Boot</source>
-        <translation type="unfinished"></translation>
+        <translation>快速啟動</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="62"/>
         <source>Enable TTY Output</source>
-        <translation type="unfinished"></translation>
+        <translation>啟用 TTY 輸出</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="74"/>
         <source>...</source>
-        <translation type="unfinished"></translation>
+        <translation>...</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="86"/>
         <source>CPU Emulation</source>
-        <translation type="unfinished"></translation>
+        <translation>CPU 模擬器</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="92"/>
@@ -394,7 +394,7 @@
     <message>
         <location filename="../consolesettingswidget.ui" line="105"/>
         <source>CDROM Emulation</source>
-        <translation type="unfinished"></translation>
+        <translation>光碟機模擬器</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.ui" line="111"/>
@@ -409,7 +409,7 @@
     <message>
         <location filename="../consolesettingswidget.ui" line="125"/>
         <source>Preload Image To RAM</source>
-        <translation type="unfinished"></translation>
+        <translation>先載入映像檔到隨機存取記憶體(RAM)</translation>
     </message>
     <message>
         <location filename="../consolesettingswidget.cpp" line="35"/>
@@ -424,7 +424,7 @@
     <message>
         <location filename="../consolesettingswidget.cpp" line="44"/>
         <source>Select BIOS Image</source>
-        <translation type="unfinished"></translation>
+        <translation>選擇 BIOS 映像檔</translation>
     </message>
 </context>
 <context>
@@ -432,22 +432,22 @@
     <message>
         <location filename="../controllersettingswidget.cpp" line="82"/>
         <source>Controller Type:</source>
-        <translation type="unfinished"></translation>
+        <translation>控制器類型:</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="113"/>
         <source>Load Profile</source>
-        <translation type="unfinished"></translation>
+        <translation>載入設定檔</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="117"/>
         <source>Save Profile</source>
-        <translation type="unfinished"></translation>
+        <translation>儲存設定檔</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="123"/>
         <source>Clear All</source>
-        <translation type="unfinished"></translation>
+        <translation>全部清除</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="125"/>
@@ -495,7 +495,7 @@
         <location filename="../controllersettingswidget.cpp" line="394"/>
         <location filename="../controllersettingswidget.cpp" line="435"/>
         <source>Browse...</source>
-        <translation type="unfinished"></translation>
+        <translation>瀏覽...</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="349"/>
@@ -523,17 +523,17 @@
         <location filename="../controllersettingswidget.cpp" line="427"/>
         <location filename="../controllersettingswidget.cpp" line="441"/>
         <source>Error</source>
-        <translation type="unfinished"></translation>
+        <translation>錯誤</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="428"/>
         <source>No name entered, input profile was not saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>檔案名稱沒有輸入。設定檔沒有儲存。</translation>
     </message>
     <message>
         <location filename="../controllersettingswidget.cpp" line="442"/>
         <source>No path selected, input profile was not saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>儲存路徑沒有指定。設定檔沒有儲存。</translation>
     </message>
 </context>
 <context>
@@ -551,12 +551,12 @@
     <message>
         <location filename="../gpusettingswidget.ui" line="53"/>
         <source>Renderer:</source>
-        <translation type="unfinished"></translation>
+        <translation>渲染器:</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.ui" line="63"/>
         <source>Adapter:</source>
-        <translation type="unfinished"></translation>
+        <translation>配接器:</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.ui" line="76"/>
@@ -566,7 +566,7 @@
     <message>
         <location filename="../gpusettingswidget.ui" line="82"/>
         <source>Aspect Ratio:</source>
-        <translation type="unfinished"></translation>
+        <translation>畫面比例:</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.ui" line="92"/>
@@ -646,7 +646,7 @@
         <location filename="../gpusettingswidget.ui" line="193"/>
         <location filename="../gpusettingswidget.cpp" line="133"/>
         <source>Geometry Correction</source>
-        <translation type="unfinished"></translation>
+        <translation>幾何校正</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.ui" line="200"/>
@@ -658,7 +658,7 @@
         <location filename="../gpusettingswidget.ui" line="207"/>
         <location filename="../gpusettingswidget.cpp" line="139"/>
         <source>Texture Correction</source>
-        <translation type="unfinished"></translation>
+        <translation>紋理校正</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.ui" line="214"/>
@@ -679,13 +679,13 @@
     <message>
         <location filename="../gpusettingswidget.cpp" line="69"/>
         <source>Adapter</source>
-        <translation type="unfinished"></translation>
+        <translation>配接器</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.cpp" line="69"/>
         <location filename="../gpusettingswidget.cpp" line="224"/>
         <source>(Default)</source>
-        <translation type="unfinished"></translation>
+        <translation>(預設值)</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.cpp" line="70"/>
@@ -695,7 +695,7 @@
     <message>
         <location filename="../gpusettingswidget.cpp" line="73"/>
         <source>Aspect Ratio</source>
-        <translation type="unfinished"></translation>
+        <translation>畫面比例</translation>
     </message>
     <message>
         <location filename="../gpusettingswidget.cpp" line="74"/>
@@ -841,7 +841,7 @@
     <message>
         <location filename="../gpusettingswidget.cpp" line="196"/>
         <source>%1x%2</source>
-        <translation type="unfinished"></translation>
+        <translation>%1x%2</translation>
     </message>
 </context>
 <context>
@@ -859,22 +859,22 @@
     <message>
         <location filename="../gamelistmodel.cpp" line="291"/>
         <source>Title</source>
-        <translation type="unfinished"></translation>
+        <translation>標題</translation>
     </message>
     <message>
         <location filename="../gamelistmodel.cpp" line="292"/>
         <source>File Title</source>
-        <translation type="unfinished"></translation>
+        <translation>檔案標題</translation>
     </message>
     <message>
         <location filename="../gamelistmodel.cpp" line="293"/>
         <source>Size</source>
-        <translation type="unfinished"></translation>
+        <translation>大小</translation>
     </message>
     <message>
         <location filename="../gamelistmodel.cpp" line="294"/>
         <source>Region</source>
-        <translation type="unfinished"></translation>
+        <translation>地區</translation>
     </message>
     <message>
         <location filename="../gamelistmodel.cpp" line="295"/>
@@ -887,7 +887,7 @@
     <message>
         <location filename="../gamelistsearchdirectoriesmodel.cpp" line="29"/>
         <source>Path</source>
-        <translation type="unfinished"></translation>
+        <translation>路徑</translation>
     </message>
     <message>
         <location filename="../gamelistsearchdirectoriesmodel.cpp" line="31"/>
@@ -905,18 +905,18 @@
     <message>
         <location filename="../gamelistsettingswidget.ui" line="34"/>
         <source>Search Directories</source>
-        <translation type="unfinished"></translation>
+        <translation>搜尋資料夾</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.ui" line="46"/>
         <source>Add</source>
-        <translation type="unfinished"></translation>
+        <translation>加入</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.ui" line="57"/>
         <location filename="../gamelistsettingswidget.cpp" line="85"/>
         <source>Remove</source>
-        <translation type="unfinished"></translation>
+        <translation>移除</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.ui" line="81"/>
@@ -936,12 +936,12 @@
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="87"/>
         <source>Open Directory...</source>
-        <translation type="unfinished"></translation>
+        <translation>開啟資料夾...</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="95"/>
         <source>Select Search Directory</source>
-        <translation type="unfinished"></translation>
+        <translation>選擇搜尋資料夾</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="101"/>
@@ -958,7 +958,7 @@ Scanning recursively takes more time, but will identify files in subdirectories.
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="140"/>
         <source>Download database from redump.org?</source>
-        <translation type="unfinished"></translation>
+        <translation>從 redump.org 下載資料庫？</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="141"/>
@@ -970,32 +970,32 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="248"/>
         <source>Downloading %1...</source>
-        <translation type="unfinished"></translation>
+        <translation>下載中 %1...</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="248"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>取消</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="259"/>
         <source>Download failed</source>
-        <translation type="unfinished"></translation>
+        <translation>下載失敗</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="266"/>
         <source>Extracting...</source>
-        <translation type="unfinished"></translation>
+        <translation>提取中...</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="272"/>
         <source>Extract failed</source>
-        <translation type="unfinished"></translation>
+        <translation>提取失敗</translation>
     </message>
     <message>
         <location filename="../gamelistsettingswidget.cpp" line="272"/>
         <source>Extracting game database failed.</source>
-        <translation type="unfinished"></translation>
+        <translation>提取遊戲資料庫失敗。</translation>
     </message>
 </context>
 <context>
@@ -1003,12 +1003,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamepropertiesdialog.ui" line="14"/>
         <source>Dialog</source>
-        <translation type="unfinished"></translation>
+        <translation>對話</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="24"/>
         <source>Image Path:</source>
-        <translation type="unfinished"></translation>
+        <translation>映像檔路徑:</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="38"/>
@@ -1018,17 +1018,17 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamepropertiesdialog.ui" line="52"/>
         <source>Title:</source>
-        <translation type="unfinished"></translation>
+        <translation>標題:</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="66"/>
         <source>Region:</source>
-        <translation type="unfinished"></translation>
+        <translation>地區:</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="80"/>
         <source>Compatibility:</source>
-        <translation type="unfinished"></translation>
+        <translation>相容性:</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="90"/>
@@ -1043,7 +1043,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamepropertiesdialog.ui" line="110"/>
         <source>Version Tested:</source>
-        <translation type="unfinished"></translation>
+        <translation>測試版本:</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="122"/>
@@ -1068,12 +1068,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamepropertiesdialog.ui" line="158"/>
         <source>Start</source>
-        <translation type="unfinished"></translation>
+        <translation>啟動</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="163"/>
         <source>Length</source>
-        <translation type="unfinished"></translation>
+        <translation>長度</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="168"/>
@@ -1093,12 +1093,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../gamepropertiesdialog.ui" line="205"/>
         <source>Export Compatibility Info</source>
-        <translation type="unfinished"></translation>
+        <translation>輸出相容性資訊</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.ui" line="212"/>
         <source>Close</source>
-        <translation type="unfinished"></translation>
+        <translation>關閉</translation>
     </message>
     <message>
         <location filename="../gamepropertiesdialog.cpp" line="53"/>
@@ -1171,19 +1171,19 @@ This will download approximately 4 megabytes over your current internet connecti
         <location filename="../generalsettingswidget.ui" line="66"/>
         <location filename="../generalsettingswidget.cpp" line="46"/>
         <source>Start Fullscreen</source>
-        <translation type="unfinished"></translation>
+        <translation>啟動全螢幕</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="73"/>
         <location filename="../generalsettingswidget.cpp" line="49"/>
         <source>Render To Main Window</source>
-        <translation type="unfinished"></translation>
+        <translation>渲染到主視窗</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="83"/>
         <location filename="../generalsettingswidget.cpp" line="68"/>
         <source>Emulation Speed</source>
-        <translation type="unfinished"></translation>
+        <translation>模擬速度</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="119"/>
@@ -1210,24 +1210,24 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../generalsettingswidget.ui" line="151"/>
         <source>Show Messages</source>
-        <translation type="unfinished"></translation>
+        <translation>顯示訊息</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="158"/>
         <location filename="../generalsettingswidget.cpp" line="74"/>
         <source>Show FPS</source>
-        <translation type="unfinished"></translation>
+        <translation>顯示 FPS</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="165"/>
         <source>Show Emulation Speed</source>
-        <translation type="unfinished"></translation>
+        <translation>顯示模擬速度</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.ui" line="172"/>
         <location filename="../generalsettingswidget.cpp" line="76"/>
         <source>Show VPS</source>
-        <translation type="unfinished"></translation>
+        <translation>顯示 VPS</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.cpp" line="40"/>
@@ -1264,7 +1264,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../generalsettingswidget.cpp" line="47"/>
         <source>Automatically switches to fullscreen mode when a game is started.</source>
-        <translation type="unfinished"></translation>
+        <translation>當遊戲啟動時，自動切換到全螢幕模式。</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.cpp" line="50"/>
@@ -1274,7 +1274,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../generalsettingswidget.cpp" line="53"/>
         <source>Pauses the emulator when a game is started.</source>
-        <translation type="unfinished"></translation>
+        <translation>當遊戲啟動時，暫停模擬器。</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.cpp" line="56"/>
@@ -1319,7 +1319,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../generalsettingswidget.cpp" line="80"/>
         <source>Show Speed</source>
-        <translation type="unfinished"></translation>
+        <translation>顯示速度</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.cpp" line="81"/>
@@ -1341,7 +1341,7 @@ This will download approximately 4 megabytes over your current internet connecti
         <location filename="../generalsettingswidget.cpp" line="97"/>
         <location filename="../generalsettingswidget.cpp" line="101"/>
         <source>Enable Automatic Update Check</source>
-        <translation type="unfinished"></translation>
+        <translation>啟用自動升級檢查</translation>
     </message>
     <message>
         <location filename="../generalsettingswidget.cpp" line="102"/>
@@ -1420,7 +1420,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="38"/>
         <source>System</source>
-        <translation type="unfinished"></translation>
+        <translation>系統</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="42"/>
@@ -1446,7 +1446,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="90"/>
         <source>Theme</source>
-        <translation type="unfinished"></translation>
+        <translation>主題</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="95"/>
@@ -1461,7 +1461,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="131"/>
         <source>&amp;Debug</source>
-        <translation type="unfinished"></translation>
+        <translation>除錯 (&amp;D)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="135"/>
@@ -1471,12 +1471,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="140"/>
         <source>Switch CPU Emulation Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>切換 CPU 模擬器模式</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="164"/>
         <source>toolBar</source>
-        <translation type="unfinished"></translation>
+        <translation>工具列</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="203"/>
@@ -1491,12 +1491,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="221"/>
         <source>&amp;Scan For New Games</source>
-        <translation type="unfinished"></translation>
+        <translation>搜尋新遊戲 (&amp;S)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="230"/>
         <source>&amp;Rescan All Games</source>
-        <translation type="unfinished"></translation>
+        <translation>重新搜尋所有遊戲 (&amp;R)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="239"/>
@@ -1531,17 +1531,17 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="292"/>
         <source>C&amp;onsole Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>控制台設定 (&amp;o)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="301"/>
         <source>&amp;Controller Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation >控制器設定 (&amp;C)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="310"/>
         <source>&amp;Hotkey Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>熱鍵設定 (&amp;H)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="319"/>
@@ -1556,12 +1556,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="333"/>
         <source>Resolution Scale</source>
-        <translation type="unfinished"></translation>
+        <translation>解析度尺度</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="338"/>
         <source>&amp;GitHub Repository...</source>
-        <translation type="unfinished"></translation>
+        <translation>GitHub 程式庫 (&amp;G)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="343"/>
@@ -1576,7 +1576,7 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="353"/>
         <source>Check for &amp;Updates...</source>
-        <translation type="unfinished"></translation>
+        <translation>檢查更新... (&amp;U)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="358"/>
@@ -1591,42 +1591,42 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="376"/>
         <source>Audio Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>音訊設定...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="385"/>
         <source>Game List Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>遊戲列表設定...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="394"/>
         <source>General Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>一般設定...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="403"/>
         <source>Advanced Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>進階設定...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="412"/>
         <source>Add Game Directory...</source>
-        <translation type="unfinished"></translation>
+        <translation>新增遊戲資料夾...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="421"/>
         <source>&amp;Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>設定... (&amp;S)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="426"/>
         <source>From File...</source>
-        <translation type="unfinished"></translation>
+        <translation>從檔案...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="431"/>
         <source>From Game List...</source>
-        <translation type="unfinished"></translation>
+        <translation>從遊戲列表...</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="436"/>
@@ -1691,12 +1691,12 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.ui" line="527"/>
         <source>&amp;Screenshot</source>
-        <translation type="unfinished"></translation>
+        <translation>截取螢幕 (&amp;S)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="536"/>
         <source>&amp;Memory Card Settings...</source>
-        <translation type="unfinished"></translation>
+        <translation>記憶卡設定 (&amp;M)</translation>
     </message>
     <message>
         <location filename="../mainwindow.ui" line="545"/>
@@ -1732,27 +1732,27 @@ This will download approximately 4 megabytes over your current internet connecti
     <message>
         <location filename="../mainwindow.cpp" line="386"/>
         <source>Default Boot</source>
-        <translation type="unfinished"></translation>
+        <translation>預設啟動</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="389"/>
         <source>Fast Boot</source>
-        <translation type="unfinished"></translation>
+        <translation>快速啟動</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="395"/>
         <source>Full Boot</source>
-        <translation type="unfinished"></translation>
+        <translation>完整啟動</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="413"/>
         <source>Add Search Directory...</source>
-        <translation type="unfinished"></translation>
+        <translation>新增搜尋資料夾...</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="483"/>
         <source>Language changed. Please restart the application to apply.</source>
-        <translation type="unfinished"></translation>
+        <translation>切換語言。請重新啟動應用程式。</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="660"/>
@@ -1931,27 +1931,27 @@ The saves will not be recoverable.</source>
     <message>
         <location filename="../settingsdialog.ui" line="63"/>
         <source>General Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>一般設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="72"/>
         <source>Console Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>控制台設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="81"/>
         <source>Game List Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>遊戲列表設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="90"/>
         <source>Hotkey Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>熱鍵設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="99"/>
         <source>Controller Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>控制器設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="108"/>
@@ -1966,12 +1966,12 @@ The saves will not be recoverable.</source>
     <message>
         <location filename="../settingsdialog.ui" line="126"/>
         <source>Audio Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>音訊設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.ui" line="135"/>
         <source>Advanced Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>進階設定</translation>
     </message>
     <message>
         <location filename="../settingsdialog.cpp" line="54"/>
