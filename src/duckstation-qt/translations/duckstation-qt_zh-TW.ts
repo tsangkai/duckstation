@@ -11,7 +11,7 @@
     <message>
         <location filename="../aboutdialog.ui" line="101"/>
         <source>DuckStation</source>
-        <translation type="unfinished"></translation>
+        <translation>DuckStation</translation>
     </message>
     <message>
         <location filename="../aboutdialog.cpp" line="14"/>
@@ -49,7 +49,7 @@
     <message>
         <location filename="../advancedsettingswidget.ui" line="32"/>
         <source>Logging</source>
-        <translation type="unfinished"></translation>
+        <translation>日誌</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="40"/>
@@ -64,22 +64,22 @@
     <message>
         <location filename="../advancedsettingswidget.ui" line="64"/>
         <source>Log To System Console</source>
-        <translation type="unfinished"></translation>
+        <translation>匯出日誌到系統控制台</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="71"/>
         <source>Log To Window</source>
-        <translation type="unfinished"></translation>
+        <translation>匯出日誌到視窗</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="78"/>
         <source>Log To Debug Console</source>
-        <translation type="unfinished"></translation>
+        <translation>匯出日誌到除錯器控制台</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="85"/>
         <source>Log To File</source>
-        <translation type="unfinished"></translation>
+        <translation>匯出日誌到檔案</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="97"/>
@@ -114,12 +114,12 @@
     <message>
         <location filename="../advancedsettingswidget.ui" line="190"/>
         <source>Reset To Default</source>
-        <translation type="unfinished"></translation>
+        <translation>恢復到預設值</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="197"/>
         <source>Enable Recompiler Memory Exceptions</source>
-        <translation type="unfinished"></translation>
+        <translation>啟用重新編譯記憶體例外</translation>
     </message>
     <message>
         <location filename="../advancedsettingswidget.ui" line="207"/>
@@ -158,22 +158,22 @@
     <message>
         <location filename="../audiosettingswidget.ui" line="38"/>
         <source>Backend:</source>
-        <translation type="unfinished"></translation>
+        <translation>後端：</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="48"/>
         <source>Buffer Size:</source>
-        <translation type="unfinished"></translation>
+        <translation>緩衝區大小：</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="93"/>
         <source>Maximum latency: 0 frames (0.00ms)</source>
-        <translation type="unfinished"></translation>
+        <translation>最大延遲：0 幀 (0.00ms)</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="103"/>
         <source>Sync To Output</source>
-        <translation type="unfinished"></translation>
+        <translation>同步到輸出</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="110"/>
@@ -183,7 +183,7 @@
     <message>
         <location filename="../audiosettingswidget.ui" line="120"/>
         <source>Controls</source>
-        <translation type="unfinished"></translation>
+        <translation>控制</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.ui" line="126"/>
@@ -199,12 +199,12 @@
     <message>
         <location filename="../audiosettingswidget.ui" line="159"/>
         <source>100%</source>
-        <translation type="unfinished"></translation>
+        <translation>100%</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.cpp" line="34"/>
         <source>Audio Backend</source>
-        <translation type="unfinished"></translation>
+        <translation>音訊引擎</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.cpp" line="35"/>
@@ -214,7 +214,7 @@
     <message>
         <location filename="../audiosettingswidget.cpp" line="39"/>
         <source>Buffer Size</source>
-        <translation type="unfinished"></translation>
+        <translation>緩衝區大小</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.cpp" line="40"/>
@@ -260,7 +260,7 @@
     <message>
         <location filename="../audiosettingswidget.cpp" line="64"/>
         <source>Maximum latency: %1 frames (%2ms)</source>
-        <translation type="unfinished"></translation>
+        <translation>最大延遲：%1 幀 (%2ms)</translation>
     </message>
     <message>
         <location filename="../audiosettingswidget.cpp" line="69"/>
@@ -275,17 +275,17 @@
         <location filename="../autoupdaterdialog.cpp" line="147"/>
         <location filename="../autoupdaterdialog.cpp" line="234"/>
         <source>Automatic Updater</source>
-        <translation type="unfinished"></translation>
+        <translation>自動更新</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="33"/>
         <source>Update Available</source>
-        <translation type="unfinished"></translation>
+        <translation>可用的更新</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="40"/>
         <source>Current Version: </source>
-        <translation type="unfinished"></translation>
+        <translation>目前版本:</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="47"/>
@@ -295,17 +295,17 @@
     <message>
         <location filename="../autoupdaterdialog.ui" line="54"/>
         <source>Update Notes:</source>
-        <translation type="unfinished"></translation>
+        <translation>更新註記:</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="83"/>
         <source>Download and Install...</source>
-        <translation>下載並安裝</translation>
+        <translation>下載並安裝...</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="90"/>
         <source>Skip This Update</source>
-        <translation type="unfinished"></translation>
+        <translation>跳過這次更新</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.ui" line="97"/>
@@ -315,27 +315,27 @@
     <message>
         <location filename="../autoupdaterdialog.cpp" line="81"/>
         <source>Updater Error</source>
-        <translation type="unfinished"></translation>
+        <translation>更新錯誤</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="148"/>
         <source>No updates are currently available. Please try again later.</source>
-        <translation type="unfinished"></translation>
+        <translation>目前沒有可用的更新。請稍後再試。</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="199"/>
         <source>Current Version: %1 (%2)</source>
-        <translation type="unfinished"></translation>
+        <translation>目前版本: %1 (%2)</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="201"/>
         <source>New Version: %1 (%2)</source>
-        <translation type="unfinished"></translation>
+        <translation>新版本: %1 (%2)</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="233"/>
         <source>Downloading %1...</source>
-        <translation type="unfinished"></translation>
+        <translation>下載中 %1...</translation>
     </message>
     <message>
         <location filename="../autoupdaterdialog.cpp" line="233"/>
